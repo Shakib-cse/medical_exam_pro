@@ -161,7 +161,7 @@ export default function ResetPasswordPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full h-11 bg-[#288ECB] hover:bg-[#207ab7] active:bg-[#1a6699] text-white font-semibold text-sm rounded-xl transition-colors shadow-none mt-3"
+              className="w-full h-11 bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-3"
             >
               Reset Password
             </Button>
@@ -173,7 +173,7 @@ export default function ResetPasswordPage() {
           Back to{" "}
           <Link
             href="/auth/sign-in"
-            className="text-[#288ECB] font-semibold hover:underline"
+            className="text-primary font-semibold hover:underline"
           >
             Log In
           </Link>

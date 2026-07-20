@@ -152,7 +152,7 @@ function VerifyContent() {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full h-11 bg-[#288ECB] hover:bg-[#207ab7] active:bg-[#1a6699] text-white font-semibold text-sm rounded-xl transition-colors shadow-none mt-2"
+            className="w-full h-11 bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-2"
           >
             Verify Code
           </Button>
@@ -165,7 +165,7 @@ function VerifyContent() {
         <button
           type="button"
           onClick={() => console.log("Resend code clicked")}
-          className="text-[#288ECB] font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer"
+          className="text-primary font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer"
         >
           Resend Code
         </button>
