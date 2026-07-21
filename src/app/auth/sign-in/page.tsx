@@ -142,7 +142,7 @@ export default function SignInPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full h-11 bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-3"
+              className="w-full h-11 bg-[#FF4E4E] hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-3"
             >
               Log In
             </Button>

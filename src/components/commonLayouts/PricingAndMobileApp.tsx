@@ -19,7 +19,7 @@ export default function PricingAndMobileApp() {
         </div>
 
         {/* 3 Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-end max-w-5xl mx-auto mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-end mx-auto mb-20">
           {/* Card 1: Sample questions (Free) */}
           <div className="bg-card text-card-foreground border border-border rounded-[32px] p-7 sm:p-8 flex flex-col justify-between shadow-sm text-left min-h-[450px]">
             <div>
@@ -134,7 +134,7 @@ export default function PricingAndMobileApp() {
         </div>
 
         {/* Mobile App Banner Card */}
-        <div className="bg-navy text-white rounded-3xl p-6 sm:p-10 lg:p-12 border border-white/10 shadow-2xl max-w-6xl mx-auto">
+        <div className="bg-navy text-white rounded-3xl p-6 sm:p-10 lg:p-12 border border-white/10 shadow-2xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             {/* Left Content */}
             <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left">

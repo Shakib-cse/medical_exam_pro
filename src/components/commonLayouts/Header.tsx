@@ -14,20 +14,28 @@ const Header = () => {
   const navLinks = [
     {
       name: "Exams & Interviews Resources",
-      path: "/resources",
-      highlighted: true,
+      path: "/",
     },
     {
       name: "Exam Guide",
       path: "/exam-guide",
       hasDropdown: true,
-      options: ["MSRA Overview", "Exam Format", "Scoring & Weighting"],
+      dropdownTitle: "How to Prepare",
+      options: [
+        { label: "MSRA exam overview - 1", path: "/exam-guide/overview-1" },
+        { label: "MSRA exam overview - 2", path: "/exam-guide/overview-2" },
+        { label: "MSRA exam overview - 3", path: "/exam-guide/overview-3" },
+        { label: "MSRA exam overview - 4", path: "/exam-guide/overview-4" },
+      ],
     },
     {
       name: "How to Prepare",
       path: "/how-to-prepare",
       hasDropdown: true,
-      options: ["Revision Plan", "Practice Questions", "Mock Exams"],
+      dropdownTitle: "Exam Guide",
+      options: [
+        { label: "How to prepare for the MSRA", path: "/how-to-prepare/msra" },
+      ],
     },
     { name: "About", path: "/about" },
     { name: "FAQs", path: "/faqs" },
@@ -51,46 +59,58 @@ const Header = () => {
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
           {navLinks.map((link) => {
-            if (link.highlighted) {
-              return (
-                <Link
-                  key={link.name}
-                  href={link.path}
-                  className="text-xs sm:text-sm font-medium text-brand-orange hover:text-brand-orange/90 transition-colors"
-                >
-                  {link.name}
-                </Link>
-              );
-            }
+            const isActive =
+              link.path === "/"
+                ? pathname === "/"
+                : pathname?.startsWith(link.path);
 
             if (link.hasDropdown) {
               return (
                 <div
                   key={link.name}
-                  className="relative group cursor-pointer"
+                  className="relative group cursor-pointer py-1"
                   onMouseEnter={() => setActiveDropdown(link.name)}
                   onMouseLeave={() => setActiveDropdown(null)}
                 >
-                  <button className="flex items-center gap-1 text-xs sm:text-sm font-medium text-white/90 hover:text-white transition-colors py-1">
+                  <button
+                    className={`flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors ${
+                      isActive
+                        ? "text-brand-orange font-semibold"
+                        : "text-white/90 hover:text-white"
+                    }`}
+                  >
                     {link.name}
                     <ChevronDown
                       size={14}
-                      className="text-white/70 group-hover:text-white transition-transform group-hover:rotate-180"
+                      className={`transition-transform group-hover:rotate-180 ${
+                        isActive
+                          ? "text-brand-orange"
+                          : "text-white/70 group-hover:text-white"
+                      }`}
                     />
                   </button>
 
-                  {/* Dropdown Menu */}
+                  {/* Dropdown Menu Popup */}
                   {activeDropdown === link.name && (
-                    <div className="absolute top-full left-0 mt-2 w-48 bg-[#093352]/95 border border-white/10 rounded-xl shadow-xl py-2 z-50 backdrop-blur-lg animate-in fade-in slide-in-from-top-2 duration-150">
-                      {link.options?.map((option) => (
-                        <Link
-                          key={option}
-                          href="#"
-                          className="block px-4 py-2 text-xs sm:text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                        >
-                          {option}
-                        </Link>
-                      ))}
+                    <div className="absolute top-full left-0 mt-2 w-60 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-slate-800">
+                      {link.dropdownTitle && (
+                        <div className="mb-2 pb-2 border-b border-slate-100">
+                          <span className="font-bold text-xs sm:text-sm text-slate-800 underline underline-offset-4 decoration-slate-400">
+                            {link.dropdownTitle}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-col divide-y divide-slate-100">
+                        {link.options?.map((option) => (
+                          <Link
+                            key={option.label}
+                            href={option.path}
+                            className="py-2.5 px-2 text-xs sm:text-sm text-slate-700 hover:text-slate-900 font-medium hover:bg-slate-50 rounded-lg transition-colors"
+                          >
+                            {option.label}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -101,7 +121,11 @@ const Header = () => {
               <Link
                 key={link.name}
                 href={link.path}
-                className="text-xs sm:text-sm font-medium text-white/90 hover:text-white transition-colors"
+                className={`text-xs sm:text-sm font-medium transition-colors ${
+                  isActive
+                    ? "text-brand-orange font-semibold"
+                    : "text-white/90 hover:text-white"
+                }`}
               >
                 {link.name}
               </Link>
@@ -146,8 +170,9 @@ const Header = () => {
 
       {/* Mobile Menu Drawer */}
       <div
-        className={`fixed top-0 right-0 h-screen w-72 bg-[#093352] text-white z-50 shadow-2xl transition-transform duration-300 lg:hidden border-l border-white/10 ${isOpen ? "translate-x-0" : "translate-x-full"
-          }`}
+        className={`fixed top-0 right-0 h-screen w-72 bg-[#093352] text-white z-50 shadow-2xl transition-transform duration-300 lg:hidden border-l border-white/10 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
       >
         <div className="flex items-center justify-between h-20 px-6 border-b border-white/10">
           <Link href="/" onClick={() => setIsOpen(false)}>
@@ -168,17 +193,27 @@ const Header = () => {
         </div>
 
         <div className="flex flex-col p-6 gap-5">
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.path}
-              onClick={() => setIsOpen(false)}
-              className={`text-base font-medium ${link.highlighted ? "text-brand-orange" : "text-white/90 hover:text-white"
+          {navLinks.map((link) => {
+            const isActive =
+              link.path === "/"
+                ? pathname === "/"
+                : pathname?.startsWith(link.path);
+
+            return (
+              <Link
+                key={link.name}
+                href={link.path}
+                onClick={() => setIsOpen(false)}
+                className={`text-base font-medium transition-colors ${
+                  isActive
+                    ? "text-brand-orange font-bold"
+                    : "text-white/90 hover:text-white"
                 }`}
-            >
-              {link.name}
-            </Link>
-          ))}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
 
           <div className="mt-8 flex flex-col gap-3 pt-6 border-t border-white/10">
             <Link
