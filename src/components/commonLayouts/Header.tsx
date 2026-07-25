@@ -9,6 +9,7 @@ import Image from "next/image";
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [mobileDropdown, setMobileDropdown] = useState<string | null>(null);
   const pathname = usePathname();
 
   const navLinks = [
@@ -90,26 +91,29 @@ const Header = () => {
                     />
                   </button>
 
-                  {/* Dropdown Menu Popup */}
+                  {/* Dropdown Menu Popup with invisible hover bridge */}
                   {activeDropdown === link.name && (
-                    <div className="absolute top-full left-0 mt-2 w-60 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-slate-800">
-                      {link.dropdownTitle && (
-                        <div className="mb-2 pb-2 border-b border-slate-100">
-                          <span className="font-bold text-xs sm:text-sm text-slate-800 underline underline-offset-4 decoration-slate-400">
-                            {link.dropdownTitle}
-                          </span>
+                    <div className="absolute top-full left-0 pt-2 w-64 z-50 text-slate-800">
+                      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                        {link.dropdownTitle && (
+                          <div className="mb-2 pb-2 border-b border-slate-100">
+                            <span className="font-bold text-xs sm:text-sm text-slate-800 underline underline-offset-4 decoration-slate-400">
+                              {link.dropdownTitle}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-col divide-y divide-slate-100">
+                          {link.options?.map((option) => (
+                            <Link
+                              key={option.label}
+                              href={option.path}
+                              onClick={() => setActiveDropdown(null)}
+                              className="py-2.5 px-2 text-xs sm:text-sm text-slate-700 hover:text-slate-900 font-medium hover:bg-slate-50 rounded-lg transition-colors"
+                            >
+                              {option.label}
+                            </Link>
+                          ))}
                         </div>
-                      )}
-                      <div className="flex flex-col divide-y divide-slate-100">
-                        {link.options?.map((option) => (
-                          <Link
-                            key={option.label}
-                            href={option.path}
-                            className="py-2.5 px-2 text-xs sm:text-sm text-slate-700 hover:text-slate-900 font-medium hover:bg-slate-50 rounded-lg transition-colors"
-                          >
-                            {option.label}
-                          </Link>
-                        ))}
                       </div>
                     </div>
                   )}
@@ -192,12 +196,61 @@ const Header = () => {
           </button>
         </div>
 
-        <div className="flex flex-col p-6 gap-5">
+        <div className="flex flex-col p-6 gap-5 overflow-y-auto max-h-[calc(100vh-80px)]">
           {navLinks.map((link) => {
             const isActive =
               link.path === "/"
                 ? pathname === "/"
                 : pathname?.startsWith(link.path);
+
+            if (link.hasDropdown) {
+              const isMobileOpen = mobileDropdown === link.name;
+              return (
+                <div key={link.name} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <Link
+                      href={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className={`text-base font-medium transition-colors ${
+                        isActive
+                          ? "text-brand-orange font-bold"
+                          : "text-white/90 hover:text-white"
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                    <button
+                      onClick={() => setMobileDropdown(isMobileOpen ? null : link.name)}
+                      className="p-1 text-white/70 hover:text-white transition-colors"
+                      aria-label="Toggle Submenu"
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-200 ${
+                          isMobileOpen ? "rotate-180 text-brand-orange" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Collapsible Mobile Options */}
+                  {isMobileOpen && (
+                    <div className="flex flex-col pl-4 gap-2 border-l border-white/15 ml-2 mt-1">
+                      {link.options?.map((option) => (
+                        <Link
+                          key={option.label}
+                          href={option.path}
+                          onClick={() => setIsOpen(false)}
+                          className="text-sm text-white/80 hover:text-brand-orange font-medium py-1 transition-colors"
+                        >
+                          {option.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <Link
