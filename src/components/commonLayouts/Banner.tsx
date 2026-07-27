@@ -1,13 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { LayoutGrid, FileText, Scale, Timer } from "lucide-react";
 
 export default function HeroBanner() {
   return (
-    <section className="relative w-full min-h-screen bg-[url('/images/commonLayout/banner.png')] bg-cover bg-[position:80%_center] sm:bg-[position:75%_center] md:bg-center bg-no-repeat flex flex-col justify-between pt-28 sm:pt-36 lg:pt-40 pb-10 sm:pb-14 text-white overflow-hidden">
+    <section className="relative w-full min-h-screen flex flex-col justify-between pt-28 sm:pt-36 lg:pt-40 pb-10 sm:pb-14 text-white overflow-hidden">
+      {/* High-quality optimized background image using Next.js Image component */}
+      <Image
+        src="/images/commonLayout/banner.png"
+        alt="MSRA Hero Banner"
+        fill
+        priority
+        quality={100}
+        sizes="100vw"
+        className="object-cover object-[80%_center] sm:object-[75%_center] md:object-center pointer-events-none select-none"
+      />
+
       {/* Gradient overlay for text contrast while keeping doctor picture visible */}
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/40 to-transparent md:from-slate-950/50 md:via-slate-950/20 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/40 to-transparent md:from-slate-950/50 md:via-slate-950/20 pointer-events-none z-0" />
 
       <div className="container mx-auto px-4 relative z-10 flex flex-col justify-start gap-10 lg:gap-20">
         {/* Main Hero Left Content */}

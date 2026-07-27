@@ -5,7 +5,7 @@ import Image from "next/image";
 
 export default function PrepareMsraHero() {
   return (
-    <section className="relative w-full bg-[#072438] text-white pt-32 sm:pt-40 lg:pt-44 pb-16 lg:pb-24 overflow-hidden">
+    <section className="relative w-full bg-navy text-white pt-32 sm:pt-40 lg:pt-44 pb-16 lg:pb-24 overflow-hidden">
       {/* Background radial glow */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-brand-blue/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-10 left-10 w-80 h-80 bg-brand-orange/5 rounded-full blur-3xl pointer-events-none" />
@@ -23,7 +23,7 @@ export default function PrepareMsraHero() {
             </h1>
 
             <p className="text-slate-300 text-base sm:text-lg font-normal leading-relaxed mb-8 max-w-xl">
-              Learn effectively, practice efficiently, and master the Multi-Specialty Recruitment Assessment with our comprehensive platform.
+              A structured approach to MSRA preparation focused on clinical knowledge, professional judgement, realistic practice, and exam performance.
             </p>
 
             {/* CTA Buttons */}
@@ -45,19 +45,16 @@ export default function PrepareMsraHero() {
           </div>
 
           {/* Right Dashboard Mockup Image */}
-          <div className="lg:col-span-6 w-full flex justify-center">
-
-
-            <div className="relative w-full rounded-b-xl overflow-hidden aspect-[16/10]">
-              <Image
-                src="/images/commonLayout/howtopreparemsrabanner.png"
-                alt="MedicalExamPro MSRA Dashboard Mockup"
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 576px"
-                priority
-                className="object-cover"
-              />
-            </div>
+          <div className="lg:col-span-6 w-full flex justify-center items-center">
+            <Image
+              src="/images/commonLayout/howtopreparemsrabanner.png"
+              alt="MedicalExamPro MSRA Dashboard Mockup"
+              width={1400}
+              height={880}
+              priority
+              quality={100}
+              className="w-full h-auto rounded-2xl object-contain"
+            />
           </div>
         </div>
       </div>
