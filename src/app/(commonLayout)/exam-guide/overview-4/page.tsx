@@ -9,7 +9,7 @@ export const metadata = {
 export default function MSRAOverviewPage4() {
   const myths = [
     "A common myth is that extensive guideline reading is the most efficient preparation strategy. While familiarity with guidelines provides context, MSRA questions rarely reward verbatim recall. Instead, they test whether candidates can apply guidance in realistic and ambiguous scenarios under time pressure. Candidates who prioritize high-volume question practice and in-depth error analysis far outperform those who rely on passive reading.",
-    "Another widespread misconception is that Professional Dilemmas questions are subjective or based on personal opinion. In reality, PD questions follow a consistent internal logic centered on patient safety, respect, team communication, and accountability. Candidates who rely on instinct rather than structured reasoning frequently miss nuance options that appear subtle but are actually decisive.",
+    "Another widespread misconception is that Professional Dilemmas questions are subjective or based on personal opinion. In reality, PD questions follow a consistent internal logic centered on patient safety, respect, team communication, and accountability. Candidates who rely on instinct rather than structured reasoning frequently miss nuanced options that appear subtle but are actually decisive.",
     "Many candidates believe that an average score is sufficient to secure a training post. This belief fails to account for rising competition ratios. As applicant numbers increase, relative ranking becomes decisive. Scores that may have been competitive in previous years can fall short of shortlisting or interview thresholds in current cycles.",
     "There is a common belief that strong clinical experience compensates for limited exam preparation. In practice, experienced clinicians often overthink simple questions, introduce unnecessary complexity, or assume management steps that are appropriate in real clinical care but not in the exam format. Success requires mastering the specific format and logic of the MSRA rather than comprehensive management plans.",
     "A particularly damaging myth is that CPS performance matters far more than PD in overall recruitment outcomes. Both papers contribute equally to ranking. Candidates who neglect PD preparation frequently lose marks through avoidable ranking errors, even when CPS performance is strong.",
@@ -42,7 +42,7 @@ export default function MSRAOverviewPage4() {
           <h1 className="text-3xl sm:text-4xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.15] mb-6">
             MSRA myths and<br />misconceptions that<br />cost marks
           </h1>
-          <p className="text-slate-300 text-xs sm:text-sm lg:text-base font-semibold uppercase tracking-wider mb-2">
+          <p className="text-slate-200 text-xs sm:text-sm lg:text-base font-semibold uppercase tracking-wider mb-2">
             Common Misconceptions, Pitfalls, and Poor Strategies That Lead to Lost Marks on the MSRA
           </p>
           <p className="text-slate-300 text-sm sm:text-base font-medium max-w-2xl mx-auto">
@@ -60,13 +60,13 @@ export default function MSRAOverviewPage4() {
             {myths.map((text, idx) => (
               <div
                 key={idx}
-                className="bg-white border border-[#E2E8F0] p-5 sm:p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.03)] text-slate-700 text-xs sm:text-sm leading-relaxed"
+                className="bg-white border border-slate-200/70 border-l-[5px] border-l-[#1D82EB] p-6 sm:p-7 rounded-xl sm:rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.04)] text-slate-800 text-sm sm:text-base leading-relaxed font-normal"
               >
                 {text}
               </div>
             ))}
 
-            <p className="text-xs sm:text-sm italic text-slate-500 text-center pt-4">
+            <p className="text-sm sm:text-base italic text-slate-700 font-medium text-center pt-4 max-w-3xl mx-auto">
               By recognizing and correcting these common misconceptions, candidates can replace counterproductive study habits with structured, high-yield preparation that protects marks and maximizes exam-day performance.
             </p>
           </div>
@@ -86,7 +86,7 @@ export default function MSRAOverviewPage4() {
                   key={idx}
                   className="bg-white border border-slate-200/80 border-l-[4px] border-l-[#1D82EB] p-5 sm:p-6 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center min-h-[120px]"
                 >
-                  <p className="font-semibold text-slate-800 text-sm sm:text-base leading-snug">
+                  <p className="font-semibold text-slate-900 text-sm sm:text-base leading-snug">
                     {point}
                   </p>
                 </div>
@@ -95,10 +95,10 @@ export default function MSRAOverviewPage4() {
           </div>
 
           {/* Bottom Navigation Buttons */}
-          <div className="flex justify-start mx-auto mt-12 sm:mt-16">
+          <div className="flex justify-start mx-auto mt-12 sm:mt-16 container px-4">
             <Link
               href="/exam-guide/overview-3"
-              className="text-center border border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold px-6 py-3 rounded-full text-xs sm:text-sm transition-all"
+              className="text-center border border-slate-300 text-slate-700 hover:text-slate-950 hover:bg-slate-50 font-semibold px-6 py-3 rounded-full text-xs sm:text-sm transition-all"
             >
               &lt; MSRA myths and misconceptions that cost marks
             </Link>

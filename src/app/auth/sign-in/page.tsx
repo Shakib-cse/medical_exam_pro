@@ -3,6 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -33,6 +34,7 @@ const signInSchema = z.object({
 type SignInFormValues = z.infer<typeof signInSchema>
 
 export default function SignInPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = React.useState(false)
 
   const form = useForm<SignInFormValues>({
@@ -45,6 +47,7 @@ export default function SignInPage() {
 
   function onSubmit(data: SignInFormValues) {
     console.log("Sign in submitted:", data)
+    router.push("/dashboard")
   }
 
   return (
@@ -142,7 +145,7 @@ export default function SignInPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full h-11 bg-[#FF4E4E] hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-3"
+              className="w-full h-11 bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-3 cursor-pointer"
             >
               Log In
             </Button>

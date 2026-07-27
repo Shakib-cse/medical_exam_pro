@@ -212,11 +212,11 @@ export default function MSRAOverviewPage2() {
             <div className="space-y-3">
               <div className="border border-[#E2E8F0] bg-white p-4 px-5 rounded-xl text-slate-700 text-xs sm:text-sm">
                 <strong className="font-bold text-[#072438] mr-2">Ranking questions:</strong>
-                <span>Rank 5 options in order of appropriateness</span>
+                <span>Put responses in order of appropriateness</span>
               </div>
               <div className="border border-[#E2E8F0] bg-white p-4 px-5 rounded-xl text-slate-700 text-xs sm:text-sm">
                 <strong className="font-bold text-[#072438] mr-2">Multiple choice / Action selection styles:</strong>
-                <span>Select the 3 most appropriate actions within the scenario context</span>
+                <span>Select the most appropriate actions within the scenario format</span>
               </div>
             </div>
           </div>
@@ -228,7 +228,7 @@ export default function MSRAOverviewPage2() {
             </h2>
 
             <div className="bg-[#EAF4FD]/90 border border-[#BEE0F8] rounded-2xl p-5 sm:p-6 text-slate-700 text-xs sm:text-base leading-relaxed">
-              PD is not about medical knowledge; it is about applying professional principles consistently under pressure, especially around prioritisation, communication, raising concerns, confidentiality, and patient safety—exactly the skills being tested in scenarios.
+              PD is not about memorising rules. It is about applying professional principles consistently under pressure, especially around prioritisation, communication, raising concerns, confidentiality, and patient safety; exactly the skills being tested in the scenarios.
             </div>
           </div>
 

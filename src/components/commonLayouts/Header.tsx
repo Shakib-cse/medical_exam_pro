@@ -21,19 +21,16 @@ const Header = () => {
       name: "Exam Guide",
       path: "/exam-guide",
       hasDropdown: true,
-      dropdownTitle: "How to Prepare",
+      dropdownTitle: "Exam Guide",
       options: [
-        { label: "MSRA exam overview - 1", path: "/exam-guide/overview-1" },
-        { label: "MSRA exam overview - 2", path: "/exam-guide/overview-2" },
-        { label: "MSRA exam overview - 3", path: "/exam-guide/overview-3" },
-        { label: "MSRA exam overview - 4", path: "/exam-guide/overview-4" },
+        { label: "MSRA exam overview", path: "/exam-guide/overview-1" },
       ],
     },
     {
       name: "How to Prepare",
       path: "/how-to-prepare",
       hasDropdown: true,
-      dropdownTitle: "Exam Guide",
+      dropdownTitle: "How to Prepare",
       options: [
         { label: "How to prepare for the MSRA", path: "/how-to-prepare/msra" },
       ],

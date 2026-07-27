@@ -35,14 +35,15 @@ export default function AboutHero() {
 
           {/* Right Image */}
           <div className="lg:col-span-6 w-full flex justify-center">
-            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-[#093554]/50">
+            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10">
               <Image
-                src="/images/commonLayout/about_doctors.png"
-                alt="UK Doctors Team"
-                width={700}
-                height={480}
+                src="/images/commonLayout/aboutBanner.png"
+                alt="MedicalExamPro Team"
+                width={800}
+                height={520}
                 priority
-                className="w-full h-100 object-cover rounded-2xl"
+                quality={100}
+                className="w-full h-auto object-cover rounded-2xl"
               />
             </div>
           </div>
