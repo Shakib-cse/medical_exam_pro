@@ -2,46 +2,130 @@
 
 import Link from "next/link";
 import React, { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [mobileDropdown, setMobileDropdown] = useState<string | null>(null);
   const pathname = usePathname();
 
   const navLinks = [
-    { name: "Features", path: "/features" },
-    { name: "Industries", path: "/industries" },
-    { name: "Pricing", path: "/pricing" },
-    { name: "Resources", path: "/resources" },
-    { name: "Contact", path: "/contact" },
+    {
+      name: "Exams & Interviews Resources",
+      path: "/",
+    },
+    {
+      name: "Exam Guide",
+      path: "/exam-guide",
+      hasDropdown: true,
+      dropdownTitle: "Exam Guide",
+      options: [
+        { label: "MSRA exam overview", path: "/exam-guide/overview-1" },
+      ],
+    },
+    {
+      name: "How to Prepare",
+      path: "/how-to-prepare",
+      hasDropdown: true,
+      dropdownTitle: "How to Prepare",
+      options: [
+        { label: "How to prepare for the MSRA", path: "/how-to-prepare/msra" },
+      ],
+    },
+    { name: "About", path: "/about" },
+    { name: "FAQs", path: "/faqs" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-background border-b shadow-lg">
-      <div className="container mx-auto h-16 px-6 flex items-center justify-between">
+    <header className="absolute top-4 sm:top-6 left-0 right-0 z-50 container mx-auto px-4">
+      <div className="w-full bg-[#093352]/80 backdrop-blur-md border border-white/10 rounded-full py-2.5 px-5 sm:px-7 shadow-xl flex items-center justify-between">
         {/* Logo */}
-        <Link
-          href="/"
-          className="text-3xl font-bold text-primary tracking-tight"
-        >
-          VENDY
+        <Link href="/" className="flex flex-row items-center justify-center">
+          <Image
+            src="/images/commonLayout/headerlogo.png"
+            alt="MedicalExamPro Logo"
+            width={180}
+            height={50}
+            priority
+            className="h-auto w-auto max-h-7 sm:max-h-8 md:max-h-9 object-contain"
+          />
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-10">
+        <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
           {navLinks.map((link) => {
-            const active = pathname.startsWith(link.path);
+            const isActive =
+              link.path === "/"
+                ? pathname === "/"
+                : pathname?.startsWith(link.path);
+
+            if (link.hasDropdown) {
+              return (
+                <div
+                  key={link.name}
+                  className="relative group cursor-pointer py-1"
+                  onMouseEnter={() => setActiveDropdown(link.name)}
+                  onMouseLeave={() => setActiveDropdown(null)}
+                >
+                  <button
+                    className={`flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors ${
+                      isActive
+                        ? "text-brand-orange font-semibold"
+                        : "text-white/90 hover:text-white"
+                    }`}
+                  >
+                    {link.name}
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform group-hover:rotate-180 ${
+                        isActive
+                          ? "text-brand-orange"
+                          : "text-white/70 group-hover:text-white"
+                      }`}
+                    />
+                  </button>
+
+                  {/* Dropdown Menu Popup with invisible hover bridge */}
+                  {activeDropdown === link.name && (
+                    <div className="absolute top-full left-0 pt-2 w-64 z-50 text-slate-800">
+                      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                        {link.dropdownTitle && (
+                          <div className="mb-2 pb-2 border-b border-slate-100">
+                            <span className="font-bold text-xs sm:text-sm text-slate-800 underline underline-offset-4 decoration-slate-400">
+                              {link.dropdownTitle}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-col divide-y divide-slate-100">
+                          {link.options?.map((option) => (
+                            <Link
+                              key={option.label}
+                              href={option.path}
+                              onClick={() => setActiveDropdown(null)}
+                              className="py-2.5 px-2 text-xs sm:text-sm text-slate-700 hover:text-slate-900 font-medium hover:bg-slate-50 rounded-lg transition-colors"
+                            >
+                              {option.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <Link
                 key={link.name}
                 href={link.path}
-                className={`text-sm font-medium transition-colors ${
-                  active
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-primary"
+                className={`text-xs sm:text-sm font-medium transition-colors ${
+                  isActive
+                    ? "text-brand-orange font-semibold"
+                    : "text-white/90 hover:text-white"
                 }`}
               >
                 {link.name}
@@ -51,74 +135,152 @@ const Header = () => {
         </nav>
 
         {/* Right Buttons */}
-        <div className="hidden lg:flex items-center gap-3">
-          <Button className="rounded-xl px-7 h-11 bg-primary hover:bg-primary/80 text-white">
+        <div className="hidden lg:flex items-center gap-5">
+          <Link
+            href="/auth/sign-in"
+            className="text-xs sm:text-sm font-medium text-white/90 hover:text-white transition-colors"
+          >
             Log In
-          </Button>
+          </Link>
 
-          <Button
-            variant="outline"
-            className="rounded-xl px-7 h-11 border-muted-foreground text-muted-foreground hover:bg-muted"
+          <Link
+            href="/auth/sign-up"
+            className="bg-brand-orange hover:bg-brand-orange/90 text-white text-xs sm:text-sm font-semibold rounded-full px-5 py-2 transition-all shadow-md hover:shadow-brand-orange/20"
           >
             Sign Up
-          </Button>
+          </Link>
         </div>
 
         {/* Mobile Menu Button */}
-        <button onClick={() => setIsOpen(true)} className="lg:hidden">
-          <Menu size={28} />
+        <button
+          onClick={() => setIsOpen(true)}
+          className="lg:hidden text-white p-1 hover:bg-white/10 rounded-lg transition-colors"
+          aria-label="Toggle Menu"
+        >
+          <Menu size={24} />
         </button>
       </div>
 
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Drawer */}
       <div
-        className={`fixed top-0 right-0 h-screen w-72 bg-background z-50 shadow-xl transition-transform duration-300 lg:hidden ${
+        className={`fixed top-0 right-0 h-screen w-72 bg-[#093352] text-white z-50 shadow-2xl transition-transform duration-300 lg:hidden border-l border-white/10 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-5 border-b">
-          <h2 className="font-semibold text-lg">Menu</h2>
-
-          <button onClick={() => setIsOpen(false)}>
-            <X />
+        <div className="flex items-center justify-between h-20 px-6 border-b border-white/10">
+          <Link href="/" onClick={() => setIsOpen(false)}>
+            <Image
+              src="/images/commonLayout/headerlogo.png"
+              alt="MedicalExamPro Logo"
+              width={140}
+              height={40}
+              className="h-auto w-auto max-h-7 object-contain"
+            />
+          </Link>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="p-1 hover:bg-white/10 rounded-lg text-white"
+          >
+            <X size={22} />
           </button>
         </div>
 
-        <div className="flex flex-col p-6 gap-6">
-          {navLinks.map((link) => (
+        <div className="flex flex-col p-6 gap-5 overflow-y-auto max-h-[calc(100vh-80px)]">
+          {navLinks.map((link) => {
+            const isActive =
+              link.path === "/"
+                ? pathname === "/"
+                : pathname?.startsWith(link.path);
+
+            if (link.hasDropdown) {
+              const isMobileOpen = mobileDropdown === link.name;
+              return (
+                <div key={link.name} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <Link
+                      href={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className={`text-base font-medium transition-colors ${
+                        isActive
+                          ? "text-brand-orange font-bold"
+                          : "text-white/90 hover:text-white"
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                    <button
+                      onClick={() => setMobileDropdown(isMobileOpen ? null : link.name)}
+                      className="p-1 text-white/70 hover:text-white transition-colors"
+                      aria-label="Toggle Submenu"
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-200 ${
+                          isMobileOpen ? "rotate-180 text-brand-orange" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Collapsible Mobile Options */}
+                  {isMobileOpen && (
+                    <div className="flex flex-col pl-4 gap-2 border-l border-white/15 ml-2 mt-1">
+                      {link.options?.map((option) => (
+                        <Link
+                          key={option.label}
+                          href={option.path}
+                          onClick={() => setIsOpen(false)}
+                          className="text-sm text-white/80 hover:text-brand-orange font-medium py-1 transition-colors"
+                        >
+                          {option.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={link.name}
+                href={link.path}
+                onClick={() => setIsOpen(false)}
+                className={`text-base font-medium transition-colors ${
+                  isActive
+                    ? "text-brand-orange font-bold"
+                    : "text-white/90 hover:text-white"
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
+
+          <div className="mt-8 flex flex-col gap-3 pt-6 border-t border-white/10">
             <Link
-              key={link.name}
-              href={link.path}
+              href="/auth/sign-in"
               onClick={() => setIsOpen(false)}
-              className={`text-lg ${
-                pathname.startsWith(link.path)
-                  ? "text-primary font-semibold"
-                  : "text-muted-foreground"
-              }`}
+              className="w-full py-2.5 text-center rounded-full border border-white/20 text-white font-medium hover:bg-white/10 transition-colors text-sm"
             >
-              {link.name}
-            </Link>
-          ))}
-
-          <div className="mt-6 flex flex-col gap-3">
-            <Button className="w-full h-11 rounded-xl bg-primary hover:bg-primary/80">
               Log In
-            </Button>
+            </Link>
 
-            <Button
-              variant="outline"
-              className="w-full h-11 rounded-xl border-muted-foreground text-muted-foreground hover:bg-muted"
+            <Link
+              href="/auth/sign-up"
+              onClick={() => setIsOpen(false)}
+              className="w-full py-2.5 text-center rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold shadow-md transition-colors text-sm"
             >
               Sign Up
-            </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -127,3 +289,4 @@ const Header = () => {
 };
 
 export default Header;
+
