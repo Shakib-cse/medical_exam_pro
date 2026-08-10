@@ -5,8 +5,11 @@ import React, { useState } from "react";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 const Header = () => {
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [mobileDropdown, setMobileDropdown] = useState<string | null>(null);
@@ -136,19 +139,29 @@ const Header = () => {
 
         {/* Right Buttons */}
         <div className="hidden lg:flex items-center gap-5">
-          <Link
-            href="/auth/sign-in"
-            className="text-xs sm:text-sm font-medium text-white/90 hover:text-white transition-colors"
-          >
-            Log In
-          </Link>
-
-          <Link
-            href="/auth/sign-up"
-            className="bg-brand-orange hover:bg-brand-orange/90 text-white text-xs sm:text-sm font-semibold rounded-full px-5 py-2 transition-all shadow-md hover:shadow-brand-orange/20"
-          >
-            Sign Up
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className="bg-brand-orange hover:bg-brand-orange/90 text-white text-xs sm:text-sm font-semibold rounded-full px-5 py-2 transition-all shadow-md hover:shadow-brand-orange/20"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/auth/sign-in"
+                className="text-xs sm:text-sm font-medium text-white/90 hover:text-white transition-colors"
+              >
+                Log In
+              </Link>
+              <Link
+                href="/auth/sign-up"
+                className="bg-brand-orange hover:bg-brand-orange/90 text-white text-xs sm:text-sm font-semibold rounded-full px-5 py-2 transition-all shadow-md hover:shadow-brand-orange/20"
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -266,21 +279,33 @@ const Header = () => {
           })}
 
           <div className="mt-8 flex flex-col gap-3 pt-6 border-t border-white/10">
-            <Link
-              href="/auth/sign-in"
-              onClick={() => setIsOpen(false)}
-              className="w-full py-2.5 text-center rounded-full border border-white/20 text-white font-medium hover:bg-white/10 transition-colors text-sm"
-            >
-              Log In
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                onClick={() => setIsOpen(false)}
+                className="w-full py-2.5 text-center rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold shadow-md transition-colors text-sm"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/auth/sign-in"
+                  onClick={() => setIsOpen(false)}
+                  className="w-full py-2.5 text-center rounded-full border border-white/20 text-white font-medium hover:bg-white/10 transition-colors text-sm"
+                >
+                  Log In
+                </Link>
 
-            <Link
-              href="/auth/sign-up"
-              onClick={() => setIsOpen(false)}
-              className="w-full py-2.5 text-center rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold shadow-md transition-colors text-sm"
-            >
-              Sign Up
-            </Link>
+                <Link
+                  href="/auth/sign-up"
+                  onClick={() => setIsOpen(false)}
+                  className="w-full py-2.5 text-center rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold shadow-md transition-colors text-sm"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

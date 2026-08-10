@@ -3,7 +3,7 @@ import { Poppins, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 // Load Poppins font
 const poppins = Poppins({
@@ -17,9 +17,11 @@ export const metadata: Metadata = {
   description: "Your complete solution for medical exam management",
 };
 
+import { ReduxProvider } from "@/redux/provider";
+
 export default function RootLayout({
   children,
-}: Readonly<{ 
+}: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
@@ -31,7 +33,7 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} font-sans antialiased bg-foreground/5 text-foreground`}
       >
-        {children}
+        <ReduxProvider>{children}</ReduxProvider>
       </body>
     </html>
   );

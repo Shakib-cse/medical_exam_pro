@@ -22,7 +22,7 @@ export default function AboutHero() {
             </h1>
 
             <p className="text-slate-300 text-base sm:text-lg font-normal leading-relaxed mb-8 max-w-xl">
-              MedicalExamPro was created to give doctors the structured, exam-relevant preparation they need to succeed in high-stakes UK specialty recruitment — starting with MSRA.
+              MedicalExamPro was created to give doctors the structured, exam-relevant preparation they need to succeed in high-stakes UK specialty recruitment — starting with the MSRA.
             </p>
 
             <Link

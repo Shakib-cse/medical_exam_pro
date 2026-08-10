@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
     })
 
     function onSubmit(data: ResetPasswordFormValues) {
-        console.log("Reset password submitted:", data)
+        // Proceed with reset password API call
     }
 
     return (
@@ -55,14 +55,16 @@ export default function ResetPasswordPage() {
             <div className="w-full max-w-[420px] flex flex-col items-center">
                 {/* Logo */}
                 <div className="flex justify-center mb-6">
-                    <Image
-                        src="/images/commonLayout/logo.png"
-                        alt="MedicalExamPro Logo"
-                        width={220}
-                        height={70}
-                        priority
-                        className="h-auto w-auto max-h-16 object-contain"
-                    />
+                    <Link href="/">
+                        <Image
+                            src="/images/commonLayout/logo.png"
+                            alt="MedicalExamPro Logo"
+                            width={220}
+                            height={70}
+                            priority
+                            className="h-auto w-auto max-h-16 object-contain"
+                        />
+                    </Link>
                 </div>
 
                 {/* Title */}
@@ -90,13 +92,13 @@ export default function ResetPasswordPage() {
                                             <Input
                                                 type={showNewPassword ? "text" : "password"}
                                                 placeholder="Enter new password..."
-                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg h-11 pr-10"
+                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-orange rounded-lg h-11 pr-10"
                                                 {...field}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowNewPassword((prev) => !prev)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
                                                 aria-label={showNewPassword ? "Hide password" : "Show password"}
                                             >
                                                 {showNewPassword ? (
@@ -126,13 +128,13 @@ export default function ResetPasswordPage() {
                                             <Input
                                                 type={showConfirmPassword ? "text" : "password"}
                                                 placeholder="Confirm new password..."
-                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg h-11 pr-10"
+                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-orange rounded-lg h-11 pr-10"
                                                 {...field}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword((prev) => !prev)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
                                                 aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                                             >
                                                 {showConfirmPassword ? (
@@ -149,12 +151,12 @@ export default function ResetPasswordPage() {
                         />
 
                         {/* Submit Button */}
-                        <Button
+                        <button
                             type="submit"
-                            className="w-full h-11 bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-3"
+                            className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 cursor-pointer mt-3 flex items-center justify-center"
                         >
                             Update Password
-                        </Button>
+                        </button>
                     </form>
                 </Form>
 
@@ -163,7 +165,7 @@ export default function ResetPasswordPage() {
                     Remember your password?{" "}
                     <Link
                         href="/auth/sign-in"
-                        className="text-primary font-semibold hover:underline"
+                        className="text-brand-orange font-semibold hover:underline"
                     >
                         Sign in here
                     </Link>

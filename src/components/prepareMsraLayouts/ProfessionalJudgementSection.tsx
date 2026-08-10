@@ -176,8 +176,8 @@ export default function ProfessionalJudgementSection() {
 
             <div className="w-full bg-white border border-slate-200/80 rounded-xl px-5 py-4 shadow-sm text-slate-500 text-sm sm:text-base">
               <span className="text-slate-400 font-semibold mr-2">–</span>
-              <strong className="font-bold text-slate-900 mr-1.5">Multiple-choice / action selection styles:</strong>
-              <span>select the most appropriate actions within the scenario format</span>
+              <strong className="font-bold text-slate-900 mr-1.5">Multiple Best Answer (Select 3 of 8):</strong>
+              <span>select the three most appropriate actions from eight options within the scenario format</span>
             </div>
           </div>
         </div>
