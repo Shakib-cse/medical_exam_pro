@@ -57,7 +57,7 @@
 
 :root {
   --navy: #072438;
-  --navy-card: #124168;
+  --navy-card: #0c2642;
   --brand-orange: #FF6B00;
   --brand-blue: #1D82EB;
   --accent-blue: #EBF5FE;
@@ -67,7 +67,7 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #1D82EB;
+  --primary: #FF6B00;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
@@ -78,7 +78,7 @@
   --destructive: #ef4444;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #1D82EB;
+  --ring: #FF6B00;
   --chart-1: #1D82EB;
   --chart-2: #FF6B00;
   --chart-3: #072438;

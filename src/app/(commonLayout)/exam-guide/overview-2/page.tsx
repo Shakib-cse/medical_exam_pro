@@ -9,18 +9,18 @@ export const metadata = {
 
 export default function MSRAOverviewPage2() {
   const cpsCategories = [
-    "Cardiovascular medicine",
-    "Respiratory medicine",
-    "Gastroenterology and hepatology",
+    "Cardiovascular Medicine",
+    "Respiratory Medicine",
+    "Gastroenterology and Hepatology",
     "Neurology",
-    "Endocrinology and diabetes",
-    "Renal medicine and urology",
-    "Musculoskeletal and rheumatology",
-    "Infectious diseases",
+    "Endocrinology and Diabetes",
+    "Renal Medicine and Urology",
+    "Musculoskeletal and Rheumatology",
+    "Infectious Diseases",
     "Psychiatry",
     "Dermatology",
     "Ophthalmology",
-    "Ear, nose and throat (ENT)",
+    "Ear, Nose and Throat (ENT)",
   ];
 
   const cpsAssesses = [
@@ -86,7 +86,7 @@ export default function MSRAOverviewPage2() {
                     Clinical Problem Solving
                   </h3>
                   <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                    The Clinical Problem Solving paper assesses the ability to apply clinical knowledge to make clinical decisions expected of doctors in Foundation-level practice.
+                    The Clinical Problem Solving paper assesses the ability to apply clinical knowledge to make clinical decisions expected of doctors at Foundation Year 2 (FY2) level.
                   </p>
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm text-slate-700">
@@ -111,14 +111,14 @@ export default function MSRAOverviewPage2() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm text-slate-700">
                   <p>
-                    <strong className="font-bold text-[#072438]">Question styles:</strong> Ranking questions · Multiple choice / Action selection styles
+                    <strong className="font-bold text-[#072438]">Question styles:</strong> Ranking questions · Multiple Best Answer (Select 3 of 8)
                   </p>
                 </div>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm italic text-slate-500">
-              There is a scheduled break between the two papers. The exam is delivered on a computer-based assessment system at a Pearson VUE test center or via remote proctoring where offered.
+              There is a scheduled break between the two papers. The exam is delivered on a computer-based assessment system at a Pearson VUE test centre or via remote proctoring where offered.
             </p>
           </div>
 
@@ -215,8 +215,8 @@ export default function MSRAOverviewPage2() {
                 <span>Put responses in order of appropriateness</span>
               </div>
               <div className="border border-[#E2E8F0] bg-white p-4 px-5 rounded-xl text-slate-700 text-xs sm:text-sm">
-                <strong className="font-bold text-[#072438] mr-2">Multiple choice / Action selection styles:</strong>
-                <span>Select the most appropriate actions within the scenario format</span>
+                <strong className="font-bold text-[#072438] mr-2">Multiple Best Answer (Select 3 of 8):</strong>
+                <span>Select the three most appropriate actions from eight options within the scenario format</span>
               </div>
             </div>
           </div>

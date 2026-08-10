@@ -1,321 +1,331 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ChevronDown, Play } from "lucide-react";
-
-interface QuestionBankItem {
-  id: number;
-  question: string;
-  type: "SJT" | "Clinical";
-  category: string;
-  lastAttempted?: string;
-  isUnattempted?: boolean;
-  avgAcc: string;
-}
-
-const initialQuestions: QuestionBankItem[] = [
-  {
-    id: 1,
-    question:
-      "You are a FY2 in A&E. A senior consultant asks you to perform a procedure you are not fully comfortable with. How should you respond?",
-    type: "SJT",
-    category: "Professionalism",
-    isUnattempted: true,
-    avgAcc: "N/A",
-  },
-  {
-    id: 2,
-    question:
-      "A 45-year-old male presents with sudden onset central chest pain radiating to the left jaw. ECG shows ST-segment elevation in leads V2-V4...",
-    type: "Clinical",
-    category: "Cardiology",
-    lastAttempted: "3 days ago",
-    avgAcc: "74%",
-  },
-  {
-    id: 3,
-    question:
-      "A 45-year-old male presents with sudden onset central chest pain radiating to the left jaw. ECG shows ST-segment elevation in leads V2-V4...",
-    type: "Clinical",
-    category: "Cardiology",
-    lastAttempted: "3 days ago",
-    avgAcc: "74%",
-  },
-  {
-    id: 4,
-    question:
-      "A 62-year-old female presents with acute onset shortness of breath and chest tightness. Chest X-ray reveals left-sided pleural effusion...",
-    type: "Clinical",
-    category: "Pulmonology",
-    lastAttempted: "1 week ago",
-    avgAcc: "68%",
-  },
-  {
-    id: 5,
-    question:
-      "A 30-year-old male reports recurrent episodes of epigastric pain and bloating after meals. Endoscopy shows gastritis...",
-    type: "Clinical",
-    category: "Gastroenterology",
-    lastAttempted: "2 weeks ago",
-    avgAcc: "81%",
-  },
-  {
-    id: 6,
-    question:
-      "A 50-year-old female with a history of hypertension presents with severe headache and visual disturbances. CT scan reveals hemorrhagic stroke...",
-    type: "Clinical",
-    category: "Neurology",
-    lastAttempted: "5 days ago",
-    avgAcc: "62%",
-  },
-  {
-    id: 7,
-    question:
-      "A 28-year-old male with a family history of diabetes presents with fatigue and polyuria. Blood tests confirm hyperglycemia...",
-    type: "Clinical",
-    category: "Endocrinology",
-    lastAttempted: "1 week ago",
-    avgAcc: "75%",
-  },
-  {
-    id: 8,
-    question:
-      "A 45-year-old female presents with persistent cough and unexplained weight loss. CT imaging shows a suspicious lung nodule...",
-    type: "Clinical",
-    category: "Oncology",
-    lastAttempted: "3 days ago",
-    avgAcc: "70%",
-  },
-];
+import { Search, ChevronDown, Play, Loader2, HelpCircle } from "lucide-react";
+import { questionBankApi, QuestionBankItemData } from "@/services/questionBankApi";
+import { mockExamApi, MockExamHistoryRow } from "@/services/mockExamApi";
 
 export default function QuestionBankPage() {
   const router = useRouter();
 
-  // Single card selection state (default card 1 active)
-  const [selectedId, setSelectedId] = useState<number | null>(1);
+  const [bankItems, setBankItems] = useState<QuestionBankItemData[]>([]);
+  const [history, setHistory] = useState<MockExamHistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const selectedQuestion = initialQuestions.find((q) => q.id === selectedId);
+  // Filters
+  const [difficultyFilter, setDifficultyFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [systemFilter, setSystemFilter] = useState("All");
 
-  const handleSelectCard = (id: number) => {
-    // Only 1 card selected at a time!
-    setSelectedId(id);
-  };
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [banksRes, historyRes] = await Promise.allSettled([
+          questionBankApi.getQuestionBanks(),
+          mockExamApi.getExamHistory(),
+        ]);
+
+        if (banksRes.status === "fulfilled" && banksRes.value?.data) {
+          setBankItems(banksRes.value.data);
+          if (banksRes.value.data.length > 0) {
+            setSelectedId(banksRes.value.data[0].id);
+          }
+        }
+
+        if (historyRes.status === "fulfilled" && historyRes.value?.data) {
+          setHistory(historyRes.value.data);
+        }
+      } catch (err) {
+        console.error("Failed to load question banks dynamically:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const filteredItems = bankItems.filter((item) => {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchSearch =
+        item.title.toLowerCase().includes(query) ||
+        (item.description && item.description.toLowerCase().includes(query)) ||
+        item.specialty?.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query);
+      if (!matchSearch) return false;
+    }
+
+    if (typeFilter !== "All") {
+      const isPDItem = item.type === "SJT" || item.type === "Professional Dilemmas" || item.category === "SJT" || item.category === "Professional Dilemmas";
+      if (typeFilter === "SJT" && !isPDItem) return false;
+      if (typeFilter === "Clinical" && isPDItem) return false;
+    }
+
+    if (difficultyFilter !== "All" && item.difficultyBadge?.toUpperCase() !== difficultyFilter.toUpperCase()) {
+      return false;
+    }
+
+    if (systemFilter !== "All") {
+      const targetSys = systemFilter.toLowerCase();
+      const itemSpec = (item.specialty || "").toLowerCase();
+      const itemCat = (item.category || "").toLowerCase();
+      if (!itemSpec.includes(targetSys) && !itemCat.includes(targetSys)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const selectedItem = bankItems.find((item) => item.id === selectedId) || filteredItems[0] || bankItems[0];
 
   const handleStartSession = () => {
-    if (selectedQuestion) {
-      router.push(`/practice?topic=${encodeURIComponent(`${selectedQuestion.type}: ${selectedQuestion.category}`)}`);
+    if (selectedItem) {
+      router.push(`/practice?bankId=${selectedItem.id}&topic=${encodeURIComponent(selectedItem.title)}`);
     } else {
       router.push("/practice");
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-          Question Bank
-        </h2>
-        <p className="text-slate-500 text-xs sm:text-sm">
-          Browse and create custom practice sets from 4,500+ clinical and SJT questions.
-        </p>
-      </div>
+  const totalQuestions = bankItems.reduce((acc, curr) => acc + (curr.questionCount || 0), 0);
 
+  // Deduplicate recently practiced tests so each test card appears at most ONCE
+  const recentlyPracticed = history.reduce<MockExamHistoryRow[]>((acc, row) => {
+    const key = row.mockExamId || row.examType;
+    const exists = acc.some(
+      (item) => (item.mockExamId && item.mockExamId === key) || item.examType === key
+    );
+    if (!exists) {
+      acc.push(row);
+    }
+    return acc;
+  }, []).slice(0, 4);
+
+  return (
+    <div className="space-y-6 font-sans">
       {/* Top Search & Filter Bar */}
       <div className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-2xs flex flex-col lg:flex-row gap-4 items-center justify-between">
         {/* Search Input */}
         <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search by keyword, condition or guideline..."
-            className="w-full bg-slate-50 border border-slate-200/80 rounded-lg py-2 pl-9 pr-4 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-medium"
           />
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="flex items-center gap-3 w-full lg:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           <div className="relative">
-            <button className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
-              <span>Difficulty: All</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
+            <select
+              value={difficultyFilter}
+              onChange={(e) => setDifficultyFilter(e.target.value)}
+              className="appearance-none bg-slate-50 border border-slate-200/80 px-3 py-2 pr-8 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer focus:outline-none"
+            >
+              <option value="All">Difficulty: All</option>
+              <option value="MODERATE">Moderate</option>
+              <option value="ADVANCED">Advanced</option>
+              <option value="CLINICAL">Clinical</option>
+              <option value="STANDARD">Standard</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
+
           <div className="relative">
-            <button className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
-              <span>Type: All</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="appearance-none bg-slate-50 border border-slate-200/80 px-3 py-2 pr-8 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer focus:outline-none"
+            >
+              <option value="All">Type: All</option>
+              <option value="Clinical">Clinical Problem Solving</option>
+              <option value="SJT">Professional Dilemmas</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
+
           <div className="relative">
-            <button className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
-              <span>System: All</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
+            <select
+              value={systemFilter}
+              onChange={(e) => setSystemFilter(e.target.value)}
+              className="appearance-none bg-slate-50 border border-slate-200/80 px-3 py-2 pr-8 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer focus:outline-none"
+            >
+              <option value="All">System: All</option>
+              <option value="Cardiology">Cardiovascular Medicine</option>
+              <option value="Respiratory">Respiratory Medicine</option>
+              <option value="Gastroenterology">Gastroenterology & Hepatology</option>
+              <option value="Neurology">Neurology</option>
+              <option value="Endocrinology">Endocrinology & Diabetes</option>
+              <option value="Renal">Renal Medicine & Urology</option>
+              <option value="Musculoskeletal">Musculoskeletal & Rheumatology</option>
+              <option value="Infectious">Infectious Diseases</option>
+              <option value="Psychiatry">Psychiatry</option>
+              <option value="Dermatology">Dermatology</option>
+              <option value="Ophthalmology">Ophthalmology</option>
+              <option value="ENT">Ear, Nose & Throat (ENT)</option>
+              <option value="Obstetrics">Obstetrics & Gynaecology</option>
+              <option value="Paediatrics">Paediatrics</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Left Column Questions (8 cols) + Right Sidebar Panels (4 cols) */}
+      {/* Main Grid: Left Column Question Modules (8 cols) + Right Sidebar Panels (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
+
         {/* Left Column: Question Cards List */}
         <div className="lg:col-span-8 space-y-3.5">
-          {initialQuestions.map((q) => {
-            const isSelected = selectedId === q.id;
+          {filteredItems.length === 0 && !loading ? (
+            <div className="bg-white rounded-xl p-8 border border-slate-200/80 text-center space-y-3">
+              <HelpCircle className="w-10 h-10 text-slate-300 mx-auto" />
+              <h3 className="text-base font-bold text-slate-800">No Question Modules Found</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Question modules published for this clinical domain will automatically appear here.
+              </p>
+            </div>
+          ) : (
+            filteredItems.map((item) => {
+              const isSelected = selectedId === item.id;
+              const isPD = item.type === "SJT" || item.type === "Professional Dilemmas" || item.category === "Professional Dilemmas" || item.category === "SJT";
 
-            return (
-              <div
-                key={q.id}
-                onClick={() => handleSelectCard(q.id)}
-                className={`rounded-xl p-4 sm:p-5 border transition-all cursor-pointer flex items-center justify-between gap-4 ${
-                  isSelected
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedId(item.id)}
+                  className={`rounded-2xl p-5 border transition-all cursor-pointer flex items-center justify-between gap-5 ${isSelected
                     ? "bg-[#fff6f0] border-[#f96302] shadow-sm ring-1 ring-[#f96302]/30"
                     : "bg-white border-slate-200/80 hover:border-slate-300 shadow-2xs"
-                }`}
-              >
-                <div className="space-y-3.5 flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-                    {q.question}
-                  </p>
+                    }`}
+                >
+                  <div className="space-y-3.5 flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                      {item.title}
+                    </p>
 
-                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                    <span
-                      className={`px-2 py-0.5 rounded-md font-bold ${
-                        q.type === "SJT"
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-md font-extrabold ${isPD
                           ? "bg-rose-100 text-rose-700"
                           : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {q.type}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 font-semibold text-slate-600">
-                      {q.category}
-                    </span>
-                    {q.isUnattempted ? (
-                      <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold">
-                        Unattempted
+                          }`}
+                      >
+                        {isPD ? "Professional Dilemmas" : (item.type || "Clinical Problem Solving")}
                       </span>
-                    ) : (
-                      <span className="text-slate-400 font-medium">
-                        • Last attempted: {q.lastAttempted}
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 font-bold text-slate-700">
+                        {item.specialty || item.category}
                       </span>
-                    )}
+                      {item.isUnattempted ? (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-100/80 text-amber-800 font-semibold text-[11px]">
+                          Unattempted
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-medium text-[11px]">
+                          • Last attempted: {item.lastAttempted || "Recently"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Average Accuracy Metric Box */}
+                  <div className="bg-slate-100/80 rounded-xl px-4 py-2.5 text-center min-w-[76px] shrink-0 border border-slate-200/60">
+                    <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                      {item.avgAcc || "N/A"}
+                    </div>
+                    <div className="text-[9px] font-extrabold text-slate-400 tracking-wider uppercase mt-0.5">
+                      AVG ACC.
+                    </div>
                   </div>
                 </div>
-
-                {/* Right Average Accuracy Metric */}
-                <div className="text-right shrink-0">
-                  <div className="text-sm sm:text-base font-extrabold text-slate-900">
-                    {q.avgAcc}
-                  </div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase">
-                    AVG ACC.
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="pt-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            SHOWING 2,410 AVAILABLE QUESTIONS
-          </div>
+              );
+            })
+          )}
         </div>
 
         {/* Right Column: Custom Session & Recently Practiced Panels */}
         <div className="lg:col-span-4 space-y-6">
-          
+
           {/* Panel 1: Create Custom Session */}
-          <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-            <h4 className="font-bold text-slate-900 text-sm">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+            <h4 className="font-bold text-slate-900 text-base">
               Create Custom Session
             </h4>
 
             <div className="space-y-2 border-y border-slate-100 py-3 text-xs">
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex justify-between items-center text-slate-500">
                 <span>Selected Questions</span>
-                <span className="font-bold text-slate-900">12</span>
+                <span className="font-extrabold text-slate-900 text-sm">
+                  {selectedItem ? selectedItem.questionCount || 12 : 12}
+                </span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex justify-between items-center text-slate-500">
                 <span>Est. Completion Time</span>
-                <span className="font-bold text-slate-900">18 mins</span>
+                <span className="font-extrabold text-slate-900 text-sm">
+                  {selectedItem ? Math.max(10, Math.round((selectedItem.questionCount || 12) * 1.5)) : 18} mins
+                </span>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5 pt-1">
               <button
                 onClick={handleStartSession}
-                className="w-full py-3 px-4 rounded-lg bg-[#f96302] hover:bg-[#ea5b00] text-white font-bold text-xs shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs shadow-md shadow-brand-orange/20 transition-all active:scale-95 cursor-pointer text-center"
               >
-                <span>Start Practice Session</span>
+                Start Practice Session
               </button>
 
-              <button className="w-full py-2.5 px-4 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer text-center">
+              <button className="w-full py-2.5 px-4 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer text-center">
                 Save for Later
               </button>
             </div>
           </div>
 
           {/* Panel 2: Recently Practiced */}
-          <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-            <h4 className="font-bold text-slate-900 text-sm">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+            <h4 className="font-bold text-slate-900 text-base">
               Recently Practiced
             </h4>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
-                <div className="space-y-0.5">
-                  <h5 className="font-bold text-slate-800 text-xs">
-                    SJT: Patient Safety
-                  </h5>
-                  <p className="text-[11px] text-slate-400">
-                    24 questions • 88% Accuracy
-                  </p>
-                </div>
-                <Link
-                  href="/practice?topic=SJT:%20Patient%20Safety"
-                  className="w-8 h-8 rounded-full bg-[#f96302] text-white flex items-center justify-center shadow-xs hover:scale-105 transition-all shrink-0"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current stroke-none ml-0.5" />
-                </Link>
+            {recentlyPracticed.length === 0 ? (
+              <div className="text-xs text-slate-400 py-3 text-center italic border border-dashed border-slate-200 rounded-xl">
+                No tests practiced recently. Take a practice exam to see your history here!
               </div>
+            ) : (
+              <div className="space-y-3">
+                {recentlyPracticed.map((rec) => (
+                  <div
+                    key={rec.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors gap-2"
+                  >
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <h5 className="font-bold text-slate-800 text-xs truncate">
+                        {rec.examType}
+                      </h5>
+                      <p className="text-[11px] font-medium text-slate-400">
+                        {rec.timeTaken} • <span className="font-bold text-emerald-600">{rec.score} Score</span>
+                      </p>
+                    </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
-                <div className="space-y-0.5">
-                  <h5 className="font-bold text-slate-800 text-xs">
-                    Neurology: Stroke Management
-                  </h5>
-                  <p className="text-[11px] text-slate-400">
-                    15 questions • 42% Accuracy
-                  </p>
-                </div>
-                <Link
-                  href="/practice?topic=Neurology:%20Stroke%20Management"
-                  className="w-8 h-8 rounded-full bg-[#f96302] text-white flex items-center justify-center shadow-xs hover:scale-105 transition-all shrink-0"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current stroke-none ml-0.5" />
-                </Link>
+                    <Link
+                      href={`/practice?topic=${encodeURIComponent(rec.examType)}`}
+                      className="w-8 h-8 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center justify-center shadow-md shadow-brand-orange/20 hover:scale-105 transition-all shrink-0 cursor-pointer"
+                      title="Practice Again"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current stroke-none ml-0.5" />
+                    </Link>
+                  </div>
+                ))}
               </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
-                <div className="space-y-0.5">
-                  <h5 className="font-bold text-slate-800 text-xs">
-                    Cardiology: ACS
-                  </h5>
-                  <p className="text-[11px] text-slate-400">
-                    40 questions • 76% Accuracy
-                  </p>
-                </div>
-                <Link
-                  href="/practice?topic=Cardiology:%20ACS"
-                  className="w-8 h-8 rounded-full bg-[#f96302] text-white flex items-center justify-center shadow-xs hover:scale-105 transition-all shrink-0"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current stroke-none ml-0.5" />
-                </Link>
-              </div>
-            </div>
+            )}
           </div>
 
         </div>

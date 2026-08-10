@@ -14,7 +14,7 @@ export function HeroBanner() {
     progressPct: number;
     isSaved: boolean;
   }>({
-    topic: "Renal & Urology: acute kidney injury questions",
+    topic: "Renal & Urology: Acute kidney injury questions",
     currentIndex: 17,
     totalQuestions: 101,
     progressPct: 18,
@@ -32,7 +32,7 @@ export function HeroBanner() {
           const pct = Math.round(((cIndex + 1) / totalQ) * 100);
 
           setSavedSession({
-            topic: parsed.topic || "Renal & Urology: acute kidney injury questions",
+            topic: parsed.topic || "Renal & Urology: Acute kidney injury questions",
             currentIndex: cIndex,
             totalQuestions: totalQ,
             progressPct: Math.min(100, pct),
@@ -99,14 +99,14 @@ export function HeroBanner() {
             <span className="text-white">{savedSession.progressPct}%</span>
           </div>
 
-          {/* Progress Bar */}
-          <div className="space-y-5">
-            <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand-blue rounded-full transition-all duration-500"
-                style={{ width: `${savedSession.progressPct}%` }}
-              />
-            </div>
+            {/* Progress Bar */}
+            <div className="space-y-5">
+              <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                  style={{ width: `${savedSession.progressPct}%` }}
+                />
+              </div>
 
             {/* Bubble Dots Graphic */}
             <div className="flex items-center justify-between px-1 py-1">

@@ -13,6 +13,7 @@ import {
   X
 } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -47,7 +48,7 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Mobile menu trigger */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-3 left-4 z-50 p-2 rounded-lg bg-[#081726] text-white shadow-md border border-slate-700"
+        className="lg:hidden fixed top-3 left-4 z-50 p-2 rounded-lg bg-[#081726] text-white shadow-md border border-slate-700 cursor-pointer"
         aria-label="Toggle Navigation"
       >
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -57,7 +58,7 @@ export function Sidebar({ className }: SidebarProps) {
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-xs"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-xs transition-opacity duration-200"
         />
       )}
 
@@ -72,7 +73,9 @@ export function Sidebar({ className }: SidebarProps) {
         {/* Brand Logo Header with Responsive Left Padding */}
         <div className="h-16 pl-16 pr-6 lg:px-6 flex items-center gap-2.5 border-b border-slate-800/80">
           <div className="rounded-lg flex items-center justify-center">
-            <Image width={140} height={20} src="/images/commonLayout/headerlogo.png" alt="logo" />
+            <Link href="/">
+              <Image width={140} height={20} src="/images/commonLayout/headerlogo.png" alt="logo" />
+            </Link>
           </div>
         </div>
 
@@ -84,31 +87,45 @@ export function Sidebar({ className }: SidebarProps) {
                 {section.title}
               </h4>
               <nav className="space-y-1">
-                {section.items.map((item, idx) => {
+                {section.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href || (item.href === "/dashboard" && pathname === "/dashboard");
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+
                   return (
                     <Link
-                      key={idx}
+                      key={item.href}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 group relative",
+                        "flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-150 group relative z-10",
                         isActive
-                          ? "bg-[#112a45] text-white font-semibold shadow-inner border border-slate-700/50"
-                          : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50"
+                          ? "text-white font-semibold"
+                          : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/40"
                       )}
                     >
                       {isActive && (
-                        <span className="absolute left-0 top-2 bottom-2 w-1 bg-cyan-400 rounded-r-full shadow-sm shadow-cyan-400" />
+                        <motion.span
+                          layoutId="activeNavBackground"
+                          className="absolute inset-0 bg-[#112a45] rounded-lg border border-slate-700/60 shadow-inner -z-10"
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        />
+                      )}
+                      {isActive && (
+                        <motion.span
+                          layoutId="activeNavIndicator"
+                          className="absolute left-0 top-2 bottom-2 w-1 bg-brand-orange rounded-r-full shadow-sm shadow-brand-orange/80 z-10"
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        />
                       )}
                       <Icon
                         className={cn(
-                          "w-4 h-4 transition-colors",
-                          isActive ? "text-cyan-400" : "text-slate-400 group-hover:text-slate-200"
+                          "w-4 h-4 transition-colors z-10",
+                          isActive ? "text-brand-orange" : "text-slate-400 group-hover:text-slate-200"
                         )}
                       />
-                      <span>{item.label}</span>
+                      <span className="z-10">{item.label}</span>
                     </Link>
                   );
                 })}

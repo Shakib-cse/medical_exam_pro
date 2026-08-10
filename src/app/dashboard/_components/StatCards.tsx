@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { overviewApi, StatCardData } from "@/services/overviewApi";
+
 function RadialProgress({ percentage }: { percentage: number }) {
   const radius = 22;
   const strokeWidth = 4;
@@ -21,7 +25,7 @@ function RadialProgress({ percentage }: { percentage: number }) {
           cx="26"
           cy="26"
           r={radius}
-          stroke="#00a8e8"
+          stroke="#10b981"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -37,35 +41,62 @@ function RadialProgress({ percentage }: { percentage: number }) {
   );
 }
 
+const defaultStats: StatCardData[] = [
+  {
+    title: "QUESTIONS ATTEMPTED",
+    value: "0",
+    subtext: "No attempts yet",
+    percentage: 0,
+    type: "radial",
+  },
+  {
+    title: "ACCURACY",
+    value: "0 / 0",
+    subtext: "0% correct",
+    percentage: 0,
+    type: "radial",
+  },
+  {
+    title: "AVERAGE ANSWERING TIME",
+    value: "0 sec",
+    subtext: "Per attempted question",
+    type: "text",
+  },
+  {
+    title: "WEAKEST AREAS",
+    value: "None yet",
+    subtext: "0 questions to revisit",
+    type: "text",
+  },
+];
+
 export function StatCards() {
-  const stats = [
-    {
-      title: "QUESTIONS ATTEMPTED",
-      value: "428 / 1,200",
-      subtext: "36% completed",
-      percentage: 36,
-      type: "radial",
-    },
-    {
-      title: "ACCURACY",
-      value: "318 / 428",
-      subtext: "74% correct",
-      percentage: 74,
-      type: "radial",
-    },
-    {
-      title: "AVERAGE ANSWERING TIME",
-      value: "82 sec",
-      subtext: "Per attempted question",
-      type: "text",
-    },
-    {
-      title: "WEAKEST AREAS",
-      value: "Renal, Ethics",
-      subtext: "42 questions to revisit",
-      type: "text",
-    },
-  ];
+  const [stats, setStats] = useState<StatCardData[]>(defaultStats);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        setLoading(true);
+        const res = await overviewApi.getUserStats();
+        if (res?.data) {
+          const d = res.data;
+          setStats([
+            d.questionsAttempted,
+            d.accuracy,
+            d.avgTime,
+            d.weakestAreas,
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to load user stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, []);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

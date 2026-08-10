@@ -117,14 +117,14 @@ export default function SubscriptionPage() {
                   const pricingSection = document.getElementById("pricing-plans");
                   pricingSection?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="w-full py-2.5 px-4 rounded-full bg-[#f96302] hover:bg-[#ea5b00] text-white font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs shadow-md shadow-brand-orange/20 transition-all active:scale-95 cursor-pointer"
               >
                 Change Plan
               </button>
 
               <button
                 onClick={() => setShowCancelModal(!showCancelModal)}
-                className="w-full py-1.5 px-4 text-[11px] font-semibold text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                className="w-full py-1.5 px-4 text-[11px] font-semibold text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
               >
                 Cancel Subscription
               </button>
@@ -147,8 +147,8 @@ export default function SubscriptionPage() {
             <button
               onClick={() => setSelectedBillingCycle("monthly")}
               className={`px-4 py-1 rounded-full transition-all cursor-pointer ${selectedBillingCycle === "monthly"
-                  ? "bg-[#07192b] text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                ? "bg-[#072438] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
                 }`}
             >
               Monthly Billed
@@ -156,8 +156,8 @@ export default function SubscriptionPage() {
             <button
               onClick={() => setSelectedBillingCycle("yearly")}
               className={`px-4 py-1 rounded-full transition-all cursor-pointer flex items-center gap-1 ${selectedBillingCycle === "yearly"
-                  ? "bg-[#07192b] text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                ? "bg-[#072438] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
                 }`}
             >
               <span>Annual</span>
@@ -203,20 +203,20 @@ export default function SubscriptionPage() {
               </div>
             </div>
 
-            <button className="w-full py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer">
+            <button className="w-full py-2.5 px-4 rounded-full border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs">
               Select Starter Pass
             </button>
           </div>
 
           {/* Plan 2: Pro Pass (Current Plan - Featured) */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-[#f96302] shadow-md flex flex-col justify-between space-y-6 relative">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#f96302] text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-xs">
+          <div className="bg-white rounded-2xl p-6 border-2 border-brand-orange shadow-md flex flex-col justify-between space-y-6 relative">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-brand-orange text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-xs">
               CURRENT ACTIVE PLAN
             </div>
 
             <div className="space-y-4 pt-1">
               <div>
-                <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider block mb-1">
+                <span className="text-[10px] font-bold text-brand-orange uppercase tracking-wider block mb-1">
                   MOST POPULAR
                 </span>
                 <h4 className="text-lg font-bold text-slate-900">Pro Access Pass</h4>
@@ -248,7 +248,7 @@ export default function SubscriptionPage() {
               </div>
             </div>
 
-            <button disabled className="w-full py-2.5 px-4 rounded-xl bg-slate-100 text-slate-500 text-xs font-bold cursor-default">
+            <button disabled className="w-full py-2.5 px-4 rounded-full bg-slate-100 text-slate-500 text-xs font-bold cursor-default">
               Current Active Plan
             </button>
           </div>
@@ -283,7 +283,7 @@ export default function SubscriptionPage() {
               </div>
             </div>
 
-            <button className="w-full py-2.5 px-4 rounded-xl bg-[#07192b] hover:bg-[#0a243e] text-white text-xs font-bold transition-all cursor-pointer">
+            <button className="w-full py-2.5 px-4 rounded-full bg-[#07192b] hover:bg-[#0c2642] text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
               Upgrade to Ultimate
             </button>
           </div>

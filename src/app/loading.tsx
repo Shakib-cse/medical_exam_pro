@@ -1,4 +1,6 @@
+import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Loading() {
   return (
@@ -7,14 +9,16 @@ export default function Loading() {
         {/* Pulsing Brand Logo Container */}
         <div className="relative mb-7 flex items-center justify-center">
           <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-[#1D82EB]/25 to-[#FF6B00]/25 blur-xl animate-pulse" />
-          <Image
-            src="/images/commonLayout/logo.png"
-            alt="MedicalExamPro Logo"
-            width={180}
-            height={55}
-            priority
-            className="h-10 w-auto object-contain relative z-10"
-          />
+          <Link href="/">
+            <Image
+              src="/images/commonLayout/logo.png"
+              alt="MedicalExamPro Logo"
+              width={180}
+              height={55}
+              priority
+              className="h-auto w-auto max-h-12 object-contain drop-shadow-md z-10"
+            />
+          </Link>
         </div>
 
         {/* Premium Dual-Ring Spinner */}

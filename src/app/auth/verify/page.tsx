@@ -4,9 +4,11 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useDispatch } from "react-redux"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,6 +19,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { authApi } from "@/lib/auth"
+import { setSession } from "@/redux/slices/authSlice"
 
 const verifySchema = z.object({
   code: z
@@ -30,9 +34,17 @@ type VerifyFormValues = z.infer<typeof verifySchema>
 function VerifyContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const dispatch = useDispatch()
+
+  const emailParam = searchParams.get("email") || ""
   const fromSource = searchParams.get("from")
 
   const [otpValues, setOtpValues] = React.useState<string[]>(Array(6).fill(""))
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isResending, setIsResending] = React.useState(false)
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
+
   const inputRefs = React.useRef<(HTMLInputElement | null)[]>([])
 
   const form = useForm<VerifyFormValues>({
@@ -46,7 +58,6 @@ function VerifyContent() {
     if (!/^\d*$/.test(value)) return
 
     const newOtp = [...otpValues]
-    // Handle pasted content
     if (value.length > 1) {
       const pasted = value.slice(0, 6).split("")
       pasted.forEach((char, i) => {
@@ -65,7 +76,6 @@ function VerifyContent() {
     const combined = newOtp.join("")
     form.setValue("code", combined, { shouldValidate: true })
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
@@ -80,12 +90,63 @@ function VerifyContent() {
     }
   }
 
-  function onSubmit(data: VerifyFormValues) {
-    console.log("Verification submitted:", data)
-    if (fromSource === "signup") {
-      router.push("/auth/sign-in")
-    } else {
-      router.push("/auth/reset-password")
+  async function onSubmit(data: VerifyFormValues) {
+    if (!emailParam) {
+      setErrorMessage("Missing email address. Please request a new verification code.")
+      return
+    }
+
+    setIsSubmitting(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    const type = fromSource === "signup" ? "verify_email" : "reset_password"
+
+    try {
+      const res = await authApi.verifyOtp({
+        email: emailParam,
+        code: data.code,
+        type,
+      })
+
+      if (fromSource === "signup") {
+        if (res.data?.token && res.data?.user) {
+          dispatch(setSession({ token: res.data.token, user: res.data.user }))
+          router.push("/dashboard")
+        } else {
+          router.push("/auth/sign-in")
+        }
+      } else {
+        router.push(
+          `/auth/reset-password?email=${encodeURIComponent(emailParam)}&code=${encodeURIComponent(data.code)}`
+        )
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Verification failed. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleResendCode() {
+    if (!emailParam) {
+      setErrorMessage("Missing email address to resend code.")
+      return
+    }
+
+    setIsResending(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    const type = fromSource === "signup" ? "verify_email" : "reset_password"
+
+    try {
+      const res = await authApi.resendOtp({ email: emailParam, type })
+      setSuccessMessage(res.message || "A new 6-digit code has been sent to your email.")
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to resend verification code.")
+    } finally {
+      setIsResending(false)
     }
   }
 
@@ -93,23 +154,41 @@ function VerifyContent() {
     <div className="w-full max-w-[440px] flex flex-col items-center">
       {/* Logo */}
       <div className="flex justify-center mb-6">
-        <Image
-          src="/images/commonLayout/logo.png"
-          alt="MedicalExamPro Logo"
-          width={220}
-          height={70}
-          priority
-          className="h-auto w-auto max-h-16 object-contain"
-        />
+        <Link href="/">
+          <Image
+            src="/images/commonLayout/logo.png"
+            alt="MedicalExamPro Logo"
+            width={220}
+            height={70}
+            priority
+            className="h-auto w-auto max-h-16 object-contain"
+          />
+        </Link>
       </div>
 
       {/* Title & Description */}
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900 text-center mb-2">
         Enter Verification Code
       </h1>
-      <p className="text-sm text-gray-500 text-center mb-8">
-        We&apos;ve sent a 6-digit verification code to your email.
+      <p className="text-sm text-gray-500 text-center mb-6">
+        We&apos;ve sent a 6-digit verification code to{" "}
+        <span className="font-semibold text-gray-800">
+          {emailParam || "your email"}
+        </span>
+        .
       </p>
+
+      {/* Error & Success Notifications */}
+      {errorMessage && (
+        <div className="w-full mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm font-medium text-center">
+          {errorMessage}
+        </div>
+      )}
+      {successMessage && (
+        <div className="w-full mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs sm:text-sm font-medium text-center">
+          {successMessage}
+        </div>
+      )}
 
       {/* Form */}
       <Form {...form}>
@@ -139,7 +218,7 @@ function VerifyContent() {
                         value={otpValues[idx]}
                         onChange={(e) => handleChange(idx, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(idx, e)}
-                        className="w-12 h-12 text-center text-lg font-bold bg-[#E9ECEF] border-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 text-gray-900 transition-colors"
+                        className="w-12 h-12 text-center text-lg font-bold bg-[#E9ECEF] border-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange text-gray-900 transition-colors"
                       />
                     ))}
                   </div>
@@ -150,12 +229,19 @@ function VerifyContent() {
           />
 
           {/* Submit Button */}
-          <Button
+          <button
             type="submit"
-            className="w-full h-11 bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-2"
+            disabled={isSubmitting}
+            className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 cursor-pointer disabled:opacity-50 mt-2 flex items-center justify-center"
           >
-            Verify Code
-          </Button>
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Verifying...
+              </span>
+            ) : (
+              "Verify Code"
+            )}
+          </button>
         </form>
       </Form>
 
@@ -164,10 +250,11 @@ function VerifyContent() {
         Didn&apos;t receive the code?{" "}
         <button
           type="button"
-          onClick={() => console.log("Resend code clicked")}
-          className="text-primary font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer"
+          disabled={isResending}
+          onClick={handleResendCode}
+          className="text-brand-orange font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer disabled:opacity-50"
         >
-          Resend Code
+          {isResending ? "Resending..." : "Resend Code"}
         </button>
       </p>
 

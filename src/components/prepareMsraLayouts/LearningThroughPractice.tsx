@@ -5,10 +5,8 @@ import { Zap, Layers, Eye, Target } from "lucide-react";
 
 export default function LearningThroughPractice() {
   const stats = [
-    { value: "2,400+", label: "Questions" },
+    { value: "10,000+", label: "Questions" },
     { value: "18", label: "Specialties" },
-    { value: "98%", label: "Exam Relevance" },
-    { value: "4.9★", label: "Exam Relevance" },
   ];
 
   const features = [
@@ -66,7 +64,7 @@ export default function LearningThroughPractice() {
         </div>
 
         {/* Stats Section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mx-auto mb-12 sm:mb-16">
+        <div className="grid grid-cols-2 max-w-xl gap-4 sm:gap-6 mx-auto mb-12 sm:mb-16">
           {stats.map((stat, idx) => (
             <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 text-center shadow-sm">
               <span className="block text-3xl sm:text-4xl font-bold text-brand-blue tracking-tight mb-1">{stat.value}</span>
