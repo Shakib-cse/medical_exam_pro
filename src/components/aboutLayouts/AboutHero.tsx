@@ -21,7 +21,7 @@ export default function AboutHero() {
               Built for the realities of competitive UK medical training
             </h1>
 
-            <p className="text-slate-300 text-base sm:text-lg font-normal leading-relaxed mb-8 max-w-xl">
+            <p className="text-slate-100 text-base sm:text-lg font-medium leading-relaxed mb-8 max-w-xl drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] [text-shadow:_0_1px_3px_rgba(0,0,0,0.8)]">
               MedicalExamPro was created to give doctors the structured, exam-relevant preparation they need to succeed in high-stakes UK specialty recruitment — starting with the MSRA.
             </p>
 

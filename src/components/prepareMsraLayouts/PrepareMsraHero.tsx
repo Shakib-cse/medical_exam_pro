@@ -22,7 +22,7 @@ export default function PrepareMsraHero() {
               How to Prepare for the <span className="text-brand-orange">MSRA</span>
             </h1>
 
-            <p className="text-slate-300 text-base sm:text-lg font-normal leading-relaxed mb-8 max-w-xl">
+            <p className="text-slate-100 text-base sm:text-lg font-medium leading-relaxed mb-8 max-w-xl drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] [text-shadow:_0_1px_3px_rgba(0,0,0,0.8)]">
               A structured approach to MSRA preparation focused on clinical knowledge, professional judgement, realistic practice, and exam performance.
             </p>
 
