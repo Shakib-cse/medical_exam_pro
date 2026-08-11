@@ -42,7 +42,7 @@ export default function PrepareCTA() {
 
                 <Link
                   href="/dashboard/subscription"
-                  className="bg-brand-blue hover:bg-brand-blue/90 text-white border border-white/10 font-semibold px-7 py-3.5 rounded-full text-xs sm:text-sm transition-all shadow-md hover:scale-[1.02] active:scale-95"
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold px-7 py-3.5 rounded-full text-xs sm:text-sm transition-all shadow-md active:scale-95"
                 >
                   View Subscription Plans
                 </Link>

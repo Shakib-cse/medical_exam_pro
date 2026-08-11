@@ -5,9 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, User, LogOut, Settings, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "@/redux/slices/authSlice";
+import { RootState } from "@/redux/store";
 
 export function Header() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -24,17 +29,18 @@ export function Header() {
 
   const handleLogout = () => {
     setDropdownOpen(false);
+    dispatch(logout());
     if (typeof window !== "undefined") {
       localStorage.removeItem("medicalexampro_practice_session");
     }
-    router.push("/");
+    router.push("/auth/sign-in");
   };
 
   return (
-    <header className="h-16 w-full bg-[#07192b] border-b border-slate-800/90 pl-14 sm:pl-16 lg:px-8 pr-4 sm:pr-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+    <header className="h-16 w-full bg-[#0d2035] border-b border-[#152e4a]/80 pl-14 sm:pl-16 lg:px-8 pr-4 sm:pr-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
       {/* Welcome Title */}
       <h1 className="text-sm sm:text-base lg:text-lg font-bold text-white tracking-tight truncate">
-        Welcome Back, Alex
+        Welcome Back, {user?.firstName || "User"}
       </h1>
 
       {/* Right Controls: Search + User Avatar */}
@@ -53,11 +59,11 @@ export function Header() {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="relative p-0.5 rounded-full hover:ring-2 hover:ring-cyan-400/40 transition-all focus:outline-none cursor-pointer"
+            className="relative p-0.5 rounded-full hover:ring-2 hover:ring-brand-orange/40 transition-all focus:outline-none cursor-pointer"
             aria-label="User profile menu"
           >
             <Avatar className="w-8 h-8 border border-slate-700 bg-slate-800">
-              <AvatarFallback className="bg-slate-800 text-cyan-300">
+              <AvatarFallback className="bg-slate-800 text-slate-200">
                 <User className="w-4 h-4" />
               </AvatarFallback>
             </Avatar>
@@ -65,17 +71,17 @@ export function Header() {
 
           {/* Profile Popup Dropdown */}
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-[#09223c] border border-slate-700/90 rounded-xl shadow-2xl z-50 p-2 text-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 mt-2 w-64 bg-[#0d2035] border border-[#183657] rounded-xl shadow-2xl z-50 p-2 text-slate-200 animate-in fade-in zoom-in-95 duration-150">
               {/* Profile Header */}
-              <div className="px-3 py-2.5 border-b border-slate-700/80 space-y-0.5">
+              <div className="px-3 py-2.5 border-b border-[#183657] space-y-0.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-white text-sm">Alex Morgan</span>
-                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 bg-cyan-950 text-cyan-300 border border-cyan-800/80 rounded-md">
+                  <span className="font-bold text-white text-sm">{user?.firstName || "User"} {user?.lastName || ""}</span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 bg-brand-orange text-white rounded-md shadow-xs">
                     PRO
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 truncate">
-                  alex.morgan@medicalexampro.co.uk
+                <p className="text-[11px] text-[#97afc7] truncate">
+                  {user?.email || "user@example.com"}
                 </p>
               </div>
 
@@ -84,15 +90,15 @@ export function Header() {
                 <Link
                   href="/dashboard/subscription"
                   onClick={() => setDropdownOpen(false)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   <span>Account & Subscription</span>
                 </Link>
                 <Link
                   href="/dashboard/settings"
                   onClick={() => setDropdownOpen(false)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <Settings className="w-4 h-4 text-slate-400" />
                   <span>Settings</span>
@@ -100,10 +106,10 @@ export function Header() {
               </div>
 
               {/* Logout Action */}
-              <div className="pt-1 border-t border-slate-700/80">
+              <div className="pt-1 border-t border-[#183657]">
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-rose-400 hover:bg-rose-950/60 hover:text-rose-300 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4 text-rose-400" />
                   <span>Logout</span>

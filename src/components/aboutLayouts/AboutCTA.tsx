@@ -16,7 +16,7 @@ export default function AboutCTA() {
               </h2>
 
               <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-8">
-                Study smarter on-the-go with full access to the MedicalExamPro question bank directly from your mobile device. Practice clinical scenarios, monitor your performance, and stay exam-ready wherever your training takes you.
+                Study smarter on the go with full access to the MedicalExamPro question bank directly from your mobile device. Practise clinical scenarios, monitor your performance, and stay exam-ready wherever your training takes you.
               </p>
 
               <div className="flex flex-wrap items-center gap-4">
@@ -29,7 +29,7 @@ export default function AboutCTA() {
 
                 <Link
                   href="/resources/msra-question-bank"
-                  className="bg-brand-blue hover:bg-brand-blue/90 text-white font-semibold px-6 py-3 rounded-full text-sm transition-all shadow-md hover:scale-[1.02] active:scale-95"
+                  className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-6 py-3 rounded-full text-sm transition-all shadow-md active:scale-95"
                 >
                   Explore Questions
                 </Link>

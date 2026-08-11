@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { authApi } from "@/lib/auth"
 
 const forgotPasswordSchema = z.object({
   email: z
@@ -30,6 +32,9 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
@@ -37,9 +42,17 @@ export default function ForgotPasswordPage() {
     },
   })
 
-  function onSubmit(data: ForgotPasswordFormValues) {
-    console.log("Forgot password submitted:", data)
-    router.push("/auth/verify")
+  async function onSubmit(data: ForgotPasswordFormValues) {
+    setIsSubmitting(true)
+    setErrorMessage(null)
+    try {
+      await authApi.forgotPassword({ email: data.email })
+      router.push(`/auth/verify?from=forgot-password&email=${encodeURIComponent(data.email)}`)
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to process request. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -47,14 +60,16 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-[420px] flex flex-col items-center">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <Image
-            src="/images/commonLayout/logo.png"
-            alt="MedicalExamPro Logo"
-            width={220}
-            height={70}
-            priority
-            className="h-auto w-auto max-h-16 object-contain"
-          />
+          <Link href="/">
+            <Image
+              src="/images/commonLayout/logo.png"
+              alt="MedicalExamPro Logo"
+              width={220}
+              height={70}
+              priority
+              className="h-auto w-auto max-h-16 object-contain"
+            />
+          </Link>
         </div>
 
         {/* Title & Description */}
@@ -64,6 +79,13 @@ export default function ForgotPasswordPage() {
         <p className="text-sm text-gray-500 text-center mb-8">
           Enter your registered email address to receive a verification code.
         </p>
+
+        {/* Error Notification */}
+        {errorMessage && (
+          <div className="w-full mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm font-medium text-center">
+            {errorMessage}
+          </div>
+        )}
 
         {/* Form */}
         <Form {...form}>
@@ -84,7 +106,7 @@ export default function ForgotPasswordPage() {
                     <Input
                       type="email"
                       placeholder="Enter your email..."
-                      className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg h-11"
+                      className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-orange rounded-lg h-11"
                       {...field}
                     />
                   </FormControl>
@@ -94,12 +116,19 @@ export default function ForgotPasswordPage() {
             />
 
             {/* Submit Button */}
-            <Button
+            <button
               type="submit"
-              className="w-full h-11 bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground font-semibold text-sm rounded-xl transition-colors shadow-none mt-3"
+              disabled={isSubmitting}
+              className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 cursor-pointer disabled:opacity-50 mt-3 flex items-center justify-center"
             >
-              Send Code
-            </Button>
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Sending Code...
+                </span>
+              ) : (
+                "Send Code"
+              )}
+            </button>
           </form>
         </Form>
 
@@ -108,7 +137,7 @@ export default function ForgotPasswordPage() {
           Remember your password?{" "}
           <Link
             href="/auth/sign-in"
-            className="text-primary font-semibold hover:underline"
+            className="text-brand-orange font-semibold hover:underline"
           >
             Log In
           </Link>

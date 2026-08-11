@@ -20,11 +20,11 @@ export default function OurStory() {
 
             <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed">
               <p>
-                Securing a training number in many specialties now requires not only clinical knowledge, but examination technique, decision-making pacing, and performance under time pressure. MedicalExamPro was built around these realities.
+                Securing a training number in many specialties now requires not only clinical knowledge, but examination technique, decision-making clarity, and performance under time pressure. Medical ExamPro was built around these realities.
               </p>
 
               <p>
-                Our long-term vision is to provide a unified, structured preparation environment for doctors navigating competitive UK medical training pathways starting with the MSRA and expanding to additional examinations and interview formats over time.
+                Our long-term vision is to provide a centralised, structured preparation environment for doctors navigating competitive UK medical training pathways starting with the MSRA and expanding to additional examinations and interview formats over time.
               </p>
             </div>
           </div>
@@ -40,7 +40,7 @@ export default function OurStory() {
                 Multi-Specialty Recruitment Assessment (MSRA)
               </h3>
               <p className="text-slate-300 text-sm leading-relaxed">
-                A high-stakes assessment used across general practice and multiple specialty training pathways. Our platform provides structured question banks, realistic mock examinations, and targeted preparation resources.
+                A high-stakes assessment used across General Practice and multiple specialty training pathways. Our platform provides a structured question bank, realistic mock examinations, and targeted preparation resources.
               </p>
             </div>
 
