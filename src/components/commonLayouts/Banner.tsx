@@ -9,14 +9,14 @@ export default function HeroBanner() {
     <section className="relative w-full min-h-screen flex flex-col justify-between pt-28 sm:pt-36 lg:pt-40 pb-10 sm:pb-14 text-white overflow-hidden">
       {/* High-quality optimized background image using Next.js Image component */}
       <Image
-        src="/images/commonLayout/banner_backup.png"
+        src="/images/commonLayout/banner_opt.png"
         alt="MSRA Hero Banner"
         fill
         priority
-        quality={100}
-        sizes="100vw"
+        unoptimized
         className="object-cover object-[80%_center] sm:object-[75%_center] md:object-center pointer-events-none select-none"
       />
+
 
       {/* Gradient overlay for text contrast while keeping doctor picture visible */}
       <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/40 to-transparent md:from-slate-950/50 md:via-slate-950/20 pointer-events-none z-0" />
@@ -44,8 +44,8 @@ export default function HeroBanner() {
             </Link>
 
             <Link
-              href="#"
-              className="bg-brand-blue hover:bg-brand-blue/90 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-lg shadow-brand-blue/25 hover:scale-[1.02] active:scale-95"
+              href="/how-to-prepare/msra"
+              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-md active:scale-95"
             >
               Learn More
             </Link>
@@ -88,7 +88,7 @@ export default function HeroBanner() {
                   <Scale className="w-5 h-5" />
                 </div>
                 <span className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                  2,500
+                  2,500+
                 </span>
                 <span className="text-[11px] sm:text-xs text-slate-300 font-normal mt-0.5">
                   Professional dilemma cases

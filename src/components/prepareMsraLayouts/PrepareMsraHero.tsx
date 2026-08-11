@@ -37,7 +37,7 @@ export default function PrepareMsraHero() {
 
               <Link
                 href="/resources/msra-question-bank"
-                className="bg-brand-blue hover:bg-brand-blue/90 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-lg hover:scale-[1.02] active:scale-95"
+                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-md active:scale-95"
               >
                 Explore Question Bank
               </Link>

@@ -7,22 +7,22 @@ export default function OurApproach() {
     {
       title: "Exam Relevance",
       description:
-        "Every question and resource is designed for the format and demands of real UK assessments not generic medical knowledge.",
+        "Every question and resource is designed to mirror the format and demands of real UK assessments not generic medical knowledge",
     },
     {
       title: "Strategic Preparation",
       description:
-        "We encourage active, technique-driven practice over passive reading, building confidence and clarity under time pressure.",
+        "We encourage active, technique-driven revision over passive reading -building decision-making clarity under time pressure.",
     },
     {
       title: "Performance Improvement",
       description:
-        "Structured practice with reflection tracks process, identify weaknesses, and improve consistency through measurable feedback.",
+        "Structured practice with reflection. Track progress, identify weaknesses, and improve consistently through measurable feedback",
     },
     {
       title: "Scalable Platform",
       description:
-        "Starting with MSRA, MedicalExamPro is built to expand - adding examinations and interview formats as the platform grows.",
+        "Starting with MSRA, Medical Exam Pro is built to expand - adding examinations and interview formats as the platform grows.",
     },
   ];
 
@@ -41,7 +41,7 @@ export default function OurApproach() {
           </div>
 
           <p className="text-slate-600 text-sm sm:text-base max-w-lg leading-relaxed">
-            Our question banks are built around the reality of how competitive UK specialty training has become. Clinical knowledge alone is not enough.
+            Our resources are built around the realities of how competitive UK specialty training has become. Clinical knowledge alone is not enough.
           </p>
         </div>
 

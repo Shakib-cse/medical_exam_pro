@@ -31,10 +31,10 @@ export default function IndependenceSection() {
 
         <div className="space-y-4 text-slate-600 text-sm sm:text-base leading-relaxed max-w-3xl mx-auto mb-12 sm:mb-16">
           <p>
-            MedicalExamPro is not affiliated with, endorsed by, or connected to the NHS, the General Medical Council, Health Education England, or any national recruitment authority.
+            Medical ExamPro is not affiliated with, endorsed by, or connected to the NHS, the General Medical Council, Health Education England (or successor bodies), or any official recruitment authority.
           </p>
           <p>
-            All content is developed independently for educational purposes. We are committed to maintaining professional standards, protecting user data, and delivering personal content that reflects the seriousness and responsibility of medical education.
+            All content is developed independently for educational purposes. We are committed to maintaining professional standards, protecting user data, and delivering content that reflects the seriousness and responsibility of medical education.
           </p>
         </div>
 
