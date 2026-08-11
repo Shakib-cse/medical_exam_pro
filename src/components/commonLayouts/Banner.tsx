@@ -19,7 +19,9 @@ export default function HeroBanner() {
 
 
       {/* Gradient overlay for text contrast while keeping doctor picture visible */}
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/40 to-transparent md:from-slate-950/50 md:via-slate-950/20 pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/65 to-transparent md:from-slate-950/85 md:via-slate-950/55 md:to-transparent pointer-events-none z-0" />
+      {/* Soft dark radial glow directly behind the hero text content for maximum subtitle readability */}
+      <div className="absolute top-16 left-0 w-[600px] h-[400px] bg-slate-950/60 rounded-full blur-3xl pointer-events-none z-0" />
 
       <div className="container mx-auto px-4 relative z-10 flex flex-col justify-start gap-10 lg:gap-20">
         {/* Main Hero Left Content */}
@@ -29,7 +31,7 @@ export default function HeroBanner() {
             <span className="text-brand-orange">MSRA</span>
           </h1>
 
-          <p className="text-slate-200 text-base sm:text-md lg:text-lg font-normal leading-relaxed max-w-xl mb-8">
+          <p className="text-slate-100 text-base sm:text-md lg:text-lg font-medium leading-relaxed max-w-xl mb-8 drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] [text-shadow:_0_1px_3px_rgba(0,0,0,0.8)]">
             Thousands of carefully written questions by UK doctors, tailored to
             the real MSRA and UK training applications
           </p>
