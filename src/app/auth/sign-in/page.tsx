@@ -3,12 +3,12 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useDispatch } from "react-redux"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -36,20 +36,34 @@ const signInSchema = z.object({
 
 type SignInFormValues = z.infer<typeof signInSchema>
 
-export default function SignInPage() {
+function SignInContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const dispatch = useDispatch()
+
+  const verifiedParam = searchParams.get("verified")
+  const emailParam = searchParams.get("email") || ""
+
   const [showPassword, setShowPassword] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(
+    verifiedParam === "true" ? "Email verified successfully! You can now log in." : null
+  )
 
   const form = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "",
+      email: emailParam,
       password: "",
     },
   })
+
+  React.useEffect(() => {
+    if (emailParam) {
+      form.setValue("email", emailParam)
+    }
+  }, [emailParam, form])
 
   async function onSubmit(data: SignInFormValues) {
     setIsSubmitting(true)
@@ -70,33 +84,40 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="min-h-screen w-full bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[420px] flex flex-col items-center">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <Link href="/">
-            <Image
-              src="/images/commonLayout/logo.png"
-              alt="MedicalExamPro Logo"
-              width={220}
-              height={70}
-              priority
-              className="h-auto w-auto max-h-16 object-contain"
-            />
-          </Link>
+    <div className="w-full max-w-[420px] flex flex-col items-center">
+      {/* Logo */}
+      <div className="flex justify-center mb-6">
+        <Link href="/">
+          <Image
+            src="/images/commonLayout/logo.png"
+            alt="MedicalExamPro Logo"
+            width={220}
+            height={70}
+            priority
+            className="h-auto w-auto max-h-16 object-contain"
+          />
+        </Link>
+      </div>
+
+      {/* Title */}
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 text-center mb-8">
+        Log in to your account
+      </h1>
+
+      {/* Success Notification */}
+      {successMessage && (
+        <div className="w-full mb-5 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs sm:text-sm font-medium flex items-center gap-2 justify-center">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span>{successMessage}</span>
         </div>
+      )}
 
-        {/* Title */}
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 text-center mb-8">
-          Log in to your account
-        </h1>
-
-        {/* Error Notification */}
-        {errorMessage && (
-          <div className="w-full mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm font-medium text-center">
-            {errorMessage}
-          </div>
-        )}
+      {/* Error Notification */}
+      {errorMessage && (
+        <div className="w-full mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm font-medium text-center">
+          {errorMessage}
+        </div>
+      )}
 
         {/* Form */}
         <Form {...form}>
@@ -198,6 +219,15 @@ export default function SignInPage() {
           </Link>
         </p>
       </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <main className="min-h-screen w-full bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
+      <React.Suspense fallback={<div className="text-gray-500">Loading...</div>}>
+        <SignInContent />
+      </React.Suspense>
     </main>
   )
 }

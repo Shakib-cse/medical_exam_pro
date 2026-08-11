@@ -59,13 +59,9 @@ export default function SignUpPage() {
     setIsSubmitting(true)
     setErrorMessage(null)
     try {
-      const response = await authApi.register(data)
-      if (response.data?.token && response.data?.user) {
-        // Redirect to login page upon successful registration
-        router.push("/auth/sign-in")
-      } else {
-        router.push("/auth/sign-in")
-      }
+      await authApi.register(data)
+      // Redirect to verification page with email & source
+      router.push(`/auth/verify?email=${encodeURIComponent(data.email)}&from=signup`)
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to create account. Please try again.")
     } finally {
