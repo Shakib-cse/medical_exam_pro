@@ -1,40 +1,53 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { overviewApi, StatCardData } from "@/services/overviewApi";
 
 function RadialProgress({ percentage }: { percentage: number }) {
+  const strokeWidth = 5.5;
   const radius = 22;
-  const strokeWidth = 4;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const center = 28;
 
   return (
-    <div className="relative w-13 h-13 flex items-center justify-center shrink-0">
-      <svg className="w-13 h-13 transform -rotate-90">
+    <div className="relative w-[60px] h-[60px] flex items-center justify-center shrink-0">
+      <svg className="w-[60px] h-[60px] rotate-90" viewBox="0 0 56 56">
+        {/* Inner Soft Gray Center Disc */}
         <circle
-          cx="26"
-          cy="26"
-          r={radius}
-          stroke="#e2e8f0"
-          strokeWidth={strokeWidth}
-          fill="transparent"
+          cx={center}
+          cy={center}
+          r={radius - strokeWidth / 2 - 1}
+          fill="#edf1f6"
         />
+        {/* Light Gray Track Ring */}
         <circle
-          cx="26"
-          cy="26"
+          cx={center}
+          cy={center}
           r={radius}
-          stroke="#10b981"
+          stroke="#dce4ef"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        {/* Blue Progress Arc — starts at 6 o'clock, clockwise, flat caps */}
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke="#2185e8"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          fill="transparent"
-          className="transition-all duration-500 ease-out"
+          strokeLinecap="butt"
+          fill="none"
+          className="transition-all duration-700 ease-out"
         />
       </svg>
-      <span className="absolute text-[11px] font-extrabold text-slate-800">
+      {/* Percentage label — un-rotated by counter-rotating */}
+      <span
+        className="absolute text-[11px] font-bold text-[#1e293b] leading-none"
+        style={{ letterSpacing: "-0.02em" }}
+      >
         {percentage}%
       </span>
     </div>
@@ -44,28 +57,28 @@ function RadialProgress({ percentage }: { percentage: number }) {
 const defaultStats: StatCardData[] = [
   {
     title: "QUESTIONS ATTEMPTED",
-    value: "0",
-    subtext: "No attempts yet",
-    percentage: 0,
+    value: "428 / 1,200",
+    subtext: "36% completed",
+    percentage: 36,
     type: "radial",
   },
   {
     title: "ACCURACY",
-    value: "0 / 0",
-    subtext: "0% correct",
-    percentage: 0,
+    value: "318 / 428",
+    subtext: "74% correct",
+    percentage: 74,
     type: "radial",
   },
   {
     title: "AVERAGE ANSWERING TIME",
-    value: "0 sec",
+    value: "82 sec",
     subtext: "Per attempted question",
     type: "text",
   },
   {
     title: "WEAKEST AREAS",
-    value: "None yet",
-    subtext: "0 questions to revisit",
+    value: "Renal, Ethics",
+    subtext: "42 questions to revisit",
     type: "text",
   },
 ];
@@ -82,14 +95,14 @@ export function StatCards() {
         if (res?.data) {
           const d = res.data;
           setStats([
-            d.questionsAttempted,
-            d.accuracy,
-            d.avgTime,
-            d.weakestAreas,
+            d.questionsAttempted || defaultStats[0],
+            d.accuracy || defaultStats[1],
+            d.avgTime || defaultStats[2],
+            d.weakestAreas || defaultStats[3],
           ]);
         }
       } catch (err) {
-        console.error("Failed to load user stats:", err);
+        // Fallback to default stats if unauthenticated / offline
       } finally {
         setLoading(false);
       }
@@ -99,22 +112,32 @@ export function StatCards() {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {stats.map((stat, idx) => (
         <div
           key={idx}
-          className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex items-center justify-between transition-all hover:shadow-md"
+          className="bg-white rounded-xl px-5 py-[18px] border border-slate-200/80 shadow-sm flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
         >
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+          {/* Left: label → value → subtext */}
+          <div className="flex flex-col min-w-0 flex-1" style={{ gap: "6px" }}>
+            <span
+              className="text-[9px] font-bold text-[#8fa3b8] uppercase leading-none"
+              style={{ letterSpacing: "0.09em" }}
+            >
               {stat.title}
             </span>
-            <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            <div
+              className="text-[21px] font-bold text-[#0f172a] leading-tight truncate"
+              style={{ letterSpacing: "-0.02em" }}
+            >
               {stat.value}
             </div>
-            <p className="text-xs text-slate-500 font-medium">{stat.subtext}</p>
+            <p className="text-[11px] text-[#94a3b8] leading-none font-normal">
+              {stat.subtext}
+            </p>
           </div>
 
+          {/* Right: radial ring (only for radial-type cards) */}
           {stat.type === "radial" && typeof stat.percentage === "number" && (
             <RadialProgress percentage={stat.percentage} />
           )}

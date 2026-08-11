@@ -110,12 +110,10 @@ function VerifyContent() {
       })
 
       if (fromSource === "signup") {
-        if (res.data?.token && res.data?.user) {
-          dispatch(setSession({ token: res.data.token, user: res.data.user }))
-          router.push("/dashboard")
-        } else {
-          router.push("/auth/sign-in")
-        }
+        setSuccessMessage("Email verified successfully! Redirecting to login...")
+        setTimeout(() => {
+          router.push(`/auth/sign-in?verified=true&email=${encodeURIComponent(emailParam)}`)
+        }, 1200)
       } else {
         router.push(
           `/auth/reset-password?email=${encodeURIComponent(emailParam)}&code=${encodeURIComponent(data.code)}`
