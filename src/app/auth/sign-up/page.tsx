@@ -211,7 +211,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 cursor-pointer disabled:opacity-50 mt-3 flex items-center justify-center"
+              className="w-full h-11 bg-brand-blue hover:bg-brand-blue/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-blue/20 cursor-pointer disabled:opacity-50 mt-3 flex items-center justify-center"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
@@ -229,7 +229,7 @@ export default function SignUpPage() {
           Already have an account?{" "}
           <Link
             href="/auth/sign-in"
-            className="text-brand-orange font-semibold hover:underline"
+            className="text-brand-blue font-semibold hover:underline"
           >
             Log In
           </Link>

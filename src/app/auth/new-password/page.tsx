@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
                                             <Input
                                                 type={showNewPassword ? "text" : "password"}
                                                 placeholder="Enter new password..."
-                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-orange rounded-lg h-11 pr-10"
+                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg h-11 pr-10"
                                                 {...field}
                                             />
                                             <button
@@ -128,7 +128,7 @@ export default function ResetPasswordPage() {
                                             <Input
                                                 type={showConfirmPassword ? "text" : "password"}
                                                 placeholder="Confirm new password..."
-                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-orange rounded-lg h-11 pr-10"
+                                                className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg h-11 pr-10"
                                                 {...field}
                                             />
                                             <button
@@ -153,7 +153,7 @@ export default function ResetPasswordPage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 cursor-pointer mt-3 flex items-center justify-center"
+                            className="w-full h-11 bg-brand-blue hover:bg-brand-blue/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-blue/20 cursor-pointer mt-3 flex items-center justify-center"
                         >
                             Update Password
                         </button>
@@ -165,7 +165,7 @@ export default function ResetPasswordPage() {
                     Remember your password?{" "}
                     <Link
                         href="/auth/sign-in"
-                        className="text-brand-orange font-semibold hover:underline"
+                        className="text-brand-blue font-semibold hover:underline"
                     >
                         Sign in here
                     </Link>

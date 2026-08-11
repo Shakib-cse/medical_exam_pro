@@ -216,7 +216,7 @@ function VerifyContent() {
                         value={otpValues[idx]}
                         onChange={(e) => handleChange(idx, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(idx, e)}
-                        className="w-12 h-12 text-center text-lg font-bold bg-[#E9ECEF] border-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange text-gray-900 transition-colors"
+                        className="w-12 h-12 text-center text-lg font-bold bg-[#E9ECEF] border-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue text-gray-900 transition-colors"
                       />
                     ))}
                   </div>
@@ -230,7 +230,7 @@ function VerifyContent() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 cursor-pointer disabled:opacity-50 mt-2 flex items-center justify-center"
+            className="w-full h-11 bg-brand-blue hover:bg-brand-blue/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-blue/20 cursor-pointer disabled:opacity-50 mt-2 flex items-center justify-center"
           >
             {isSubmitting ? (
               <span className="flex items-center gap-2">
@@ -250,7 +250,7 @@ function VerifyContent() {
           type="button"
           disabled={isResending}
           onClick={handleResendCode}
-          className="text-brand-orange font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer disabled:opacity-50"
+          className="text-brand-blue font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer disabled:opacity-50"
         >
           {isResending ? "Resending..." : "Resend Code"}
         </button>
