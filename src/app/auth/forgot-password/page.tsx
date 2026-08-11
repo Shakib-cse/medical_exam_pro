@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
                     <Input
                       type="email"
                       placeholder="Enter your email..."
-                      className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-orange rounded-lg h-11"
+                      className="bg-[#E9ECEF] border-none text-sm placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg h-11"
                       {...field}
                     />
                   </FormControl>
@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 cursor-pointer disabled:opacity-50 mt-3 flex items-center justify-center"
+              className="w-full h-11 bg-brand-blue hover:bg-brand-blue/90 active:scale-[0.99] text-white font-semibold text-sm rounded-full transition-all shadow-md shadow-brand-blue/20 cursor-pointer disabled:opacity-50 mt-3 flex items-center justify-center"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
@@ -137,7 +137,7 @@ export default function ForgotPasswordPage() {
           Remember your password?{" "}
           <Link
             href="/auth/sign-in"
-            className="text-brand-orange font-semibold hover:underline"
+            className="text-brand-blue font-semibold hover:underline"
           >
             Log In
           </Link>
