@@ -14,10 +14,10 @@ export function HeroBanner() {
     progressPct: number;
     isSaved: boolean;
   }>({
-    topic: "Renal & Urology: Acute kidney injury questions",
-    currentIndex: 17,
-    totalQuestions: 101,
-    progressPct: 18,
+    topic: "Start Your Medical Practice Session",
+    currentIndex: 0,
+    totalQuestions: 0,
+    progressPct: 0,
     isSaved: false,
   });
 
@@ -32,7 +32,7 @@ export function HeroBanner() {
           const pct = Math.round(((cIndex + 1) / totalQ) * 100);
 
           setSavedSession({
-            topic: parsed.topic || "Renal & Urology: Acute kidney injury questions",
+            topic: parsed.topic || "Active Practice Session",
             currentIndex: cIndex,
             totalQuestions: totalQ,
             progressPct: Math.min(100, pct),
@@ -66,11 +66,10 @@ export function HeroBanner() {
   return (
     <div className="relative w-full rounded-2xl sm:rounded-[22px] bg-navy-card text-white p-6 sm:p-8 border border-white/10 shadow-lg overflow-hidden">
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-
         {/* Left Column Content */}
         <div className="lg:col-span-7 space-y-3">
           <span className="text-xs sm:text-sm font-medium text-slate-300/80 tracking-wide block">
-            Start where you left off
+            {savedSession.isSaved ? "Start where you left off" : "Ready to prepare?"}
           </span>
 
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white leading-tight">
@@ -78,15 +77,17 @@ export function HeroBanner() {
           </h2>
 
           <p className="text-slate-300/80 text-xs sm:text-sm max-w-lg leading-relaxed font-normal">
-            You stopped at question {savedSession.currentIndex + 1} of {savedSession.totalQuestions}. Continue the same timed set, then review explanations for electrolyte emergencies.
+            {savedSession.isSaved
+              ? `You stopped at question ${savedSession.currentIndex + 1} of ${savedSession.totalQuestions}. Continue your timed set and review explanations.`
+              : "Choose a topic from Clinical Problem Solving or launch a Mock Exam to track your real-time analytics."}
           </p>
 
           <div className="pt-2">
             <Link
-              href="/practice?mode=resume"
+              href={savedSession.isSaved ? "/practice?mode=resume" : "/dashboard/question-bank"}
               className="inline-flex items-center gap-1 px-6 py-2.5 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white text-xs sm:text-sm font-semibold shadow-md transition-all active:scale-95 cursor-pointer"
             >
-              <span>Resume set</span>
+              <span>{savedSession.isSaved ? "Resume set" : "Start practicing"}</span>
               <ChevronRight className="w-4 h-4 stroke-[2.5]" />
             </Link>
           </div>
@@ -99,14 +100,14 @@ export function HeroBanner() {
             <span className="text-white">{savedSession.progressPct}%</span>
           </div>
 
-            {/* Progress Bar */}
-            <div className="space-y-5">
-              <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                  style={{ width: `${savedSession.progressPct}%` }}
-                />
-              </div>
+          {/* Progress Bar */}
+          <div className="space-y-5">
+            <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${savedSession.progressPct}%` }}
+              />
+            </div>
 
             {/* Bubble Dots Graphic */}
             <div className="flex items-center justify-between px-1 py-1">
@@ -119,7 +120,6 @@ export function HeroBanner() {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

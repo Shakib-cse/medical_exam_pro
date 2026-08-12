@@ -2,27 +2,53 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { Loader2, HelpCircle, ChevronRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { overviewApi, DilemmaCardData } from "@/services/overviewApi";
+
+const CACHE_KEY = "cached_professional_dilemmas";
 
 export function ProfessionalDilemmas() {
   const [dilemmaCards, setDilemmaCards] = useState<DilemmaCardData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
+  // Load from local storage cache instantly on mount for 0ms render
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setDilemmaCards(parsed);
+          } else {
+            setLoading(true);
+          }
+        } catch (e) {
+          setLoading(true);
+        }
+      } else {
+        setLoading(true);
+      }
+    }
+  }, []);
+
+  // Fetch latest data from backend in background asynchronously
   useEffect(() => {
     async function fetchDilemmas() {
       try {
-        setLoading(true);
         const res = await overviewApi.getOverviewContent();
-        if (res?.data?.professional_dilemmas?.content && Array.isArray(res.data.professional_dilemmas.content)) {
-          setDilemmaCards(res.data.professional_dilemmas.content);
-        } else {
-          setDilemmaCards([]);
+        if (
+          res?.data?.professional_dilemmas?.content &&
+          Array.isArray(res.data.professional_dilemmas.content)
+        ) {
+          const content = res.data.professional_dilemmas.content;
+          setDilemmaCards(content);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(content));
+          }
         }
       } catch (err) {
         console.error("Failed to load professional dilemmas:", err);
-        setDilemmaCards([]);
       } finally {
         setLoading(false);
       }
@@ -32,7 +58,7 @@ export function ProfessionalDilemmas() {
   }, []);
 
   if (!loading && dilemmaCards.length === 0) {
-    return null; // Hide cleanly if no dilemma cards exist yet
+    return null; // Return null cleanly if no dilemma cards exist
   }
 
   return (
@@ -53,10 +79,11 @@ export function ProfessionalDilemmas() {
             {/* Thumbnail */}
             <div className="relative w-full h-36 bg-slate-100 overflow-hidden">
               <Image
-                src={card.image || "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&auto=format&fit=crop&q=80"}
+                src={card.image}
                 alt={card.title}
                 fill
                 unoptimized
+                priority={idx < 3}
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
               />
