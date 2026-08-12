@@ -87,7 +87,7 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Form here*/}
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
