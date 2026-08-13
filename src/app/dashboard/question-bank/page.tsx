@@ -7,6 +7,33 @@ import { Search, ChevronDown, Play, Loader2, HelpCircle } from "lucide-react";
 import { questionBankApi, QuestionBankItemData } from "@/services/questionBankApi";
 import { mockExamApi, MockExamHistoryRow } from "@/services/mockExamApi";
 
+function formatDaysAgo(dateInput?: Date | string | number): string {
+  if (!dateInput) return "Recently";
+  if (typeof dateInput === "string") {
+    const lower = dateInput.trim().toLowerCase();
+    if (lower === "today") return "Today";
+    if (lower.endsWith("ago")) return dateInput;
+  }
+
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return typeof dateInput === "string" ? dateInput : "Recently";
+
+  const now = new Date();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const attemptMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+  const diffMs = todayMidnight - attemptMidnight;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return "Today";
+  } else if (diffDays === 1) {
+    return "1 day ago";
+  } else {
+    return `${diffDays} days ago`;
+  }
+}
+
 export default function QuestionBankPage() {
   const router = useRouter();
 
@@ -185,7 +212,26 @@ export default function QuestionBankPage() {
 
         {/* Left Column: Question Cards List */}
         <div className="lg:col-span-8 space-y-3.5">
-          {filteredItems.length === 0 && !loading ? (
+          {loading ? (
+            <div className="space-y-3.5">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl p-5 border border-slate-200/80 bg-white shadow-2xs animate-pulse flex items-center justify-between gap-5"
+                >
+                  <div className="space-y-3 flex-1 min-w-0">
+                    <div className="h-5 bg-slate-200 rounded-md w-3/4 sm:w-1/2" />
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="h-5 bg-slate-100 rounded-md w-32" />
+                      <div className="h-5 bg-slate-100 rounded-md w-24" />
+                      <div className="h-4 bg-slate-100 rounded-md w-20" />
+                    </div>
+                  </div>
+                  <div className="bg-slate-100 rounded-xl px-4 py-2.5 w-[76px] h-12 shrink-0 border border-slate-200/60 animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="bg-white rounded-xl p-8 border border-slate-200/80 text-center space-y-3">
               <HelpCircle className="w-10 h-10 text-slate-300 mx-auto" />
               <h3 className="text-base font-bold text-slate-800">No Question Modules Found</h3>
@@ -197,6 +243,43 @@ export default function QuestionBankPage() {
             filteredItems.map((item) => {
               const isSelected = selectedId === item.id;
               const isPD = item.type === "SJT" || item.type === "Professional Dilemmas" || item.category === "Professional Dilemmas" || item.category === "SJT";
+
+              let displayIsUnattempted = item.isUnattempted;
+              let displayLastAttempted = item.lastAttempted ? formatDaysAgo(item.lastAttempted) : "Today";
+              let displayAvgAcc = item.avgAcc;
+
+              // Check localStorage for local attempt fallback
+              if (typeof window !== "undefined") {
+                try {
+                  let foundAttempt: any = null;
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (
+                      key &&
+                      (key.endsWith(`bank_last_attempt_${item.id}`) ||
+                        key.endsWith(`topic_last_attempt_${item.title}`))
+                    ) {
+                      const val = localStorage.getItem(key);
+                      if (val) {
+                        try {
+                          const parsed = JSON.parse(val);
+                          if (parsed.timestamp) {
+                            foundAttempt = parsed;
+                            break;
+                          }
+                        } catch (_) { }
+                      }
+                    }
+                  }
+                  if (foundAttempt && foundAttempt.timestamp) {
+                    displayIsUnattempted = false;
+                    displayLastAttempted = formatDaysAgo(foundAttempt.timestamp);
+                    if ((!displayAvgAcc || displayAvgAcc === "N/A") && foundAttempt.accuracyPct !== undefined) {
+                      displayAvgAcc = `${foundAttempt.accuracyPct}%`;
+                    }
+                  }
+                } catch (_) { }
+              }
 
               return (
                 <div
@@ -224,13 +307,13 @@ export default function QuestionBankPage() {
                       <span className="px-2 py-0.5 rounded-md bg-slate-100 font-bold text-slate-700">
                         {item.specialty || item.category}
                       </span>
-                      {item.isUnattempted ? (
+                      {displayIsUnattempted ? (
                         <span className="px-2 py-0.5 rounded-md bg-amber-100/80 text-amber-800 font-semibold text-[11px]">
                           Unattempted
                         </span>
                       ) : (
                         <span className="text-slate-400 font-medium text-[11px]">
-                          • Last attempted: {item.lastAttempted || "Recently"}
+                          • Last attempted: {displayLastAttempted}
                         </span>
                       )}
                     </div>
@@ -239,8 +322,9 @@ export default function QuestionBankPage() {
                   {/* Right Average Accuracy Metric Box */}
                   <div className="bg-slate-100/80 rounded-xl px-4 py-2.5 text-center min-w-[76px] shrink-0 border border-slate-200/60">
                     <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                      {item.avgAcc || "N/A"}
+                      {displayAvgAcc || "N/A"}
                     </div>
+
                     <div className="text-[9px] font-extrabold text-slate-400 tracking-wider uppercase mt-0.5">
                       AVG ACC.
                     </div>
@@ -283,9 +367,9 @@ export default function QuestionBankPage() {
                 Start Practice Session
               </button>
 
-              <button className="w-full py-2.5 px-4 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer text-center">
+              {/* <button className="w-full py-2.5 px-4 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer text-center">
                 Save for Later
-              </button>
+              </button> */}
             </div>
           </div>
 
@@ -295,7 +379,22 @@ export default function QuestionBankPage() {
               Recently Practiced
             </h4>
 
-            {recentlyPracticed.length === 0 ? (
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-100 animate-pulse gap-2"
+                  >
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="h-4 bg-slate-200 rounded w-2/3" />
+                      <div className="h-3 bg-slate-100 rounded w-1/3" />
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            ) : recentlyPracticed.length === 0 ? (
               <div className="text-xs text-slate-400 py-3 text-center italic border border-dashed border-slate-200 rounded-xl">
                 No tests practiced recently. Take a practice exam to see your history here!
               </div>

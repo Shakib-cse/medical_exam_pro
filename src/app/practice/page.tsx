@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import Link from "next/link";
 import { HelpCircle } from "lucide-react";
 import { mockExamApi } from "@/services/mockExamApi";
@@ -15,6 +17,8 @@ const STORAGE_KEY = "medicalexampro_practice_session";
 function PracticeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userId = user?.id || user?.email || "guest";
   const examIdParam = searchParams.get("examId");
   const bankIdParam = searchParams.get("bankId");
   const topicIdParam = searchParams.get("topicId");
@@ -31,13 +35,15 @@ function PracticeContent() {
   const [loadingExam, setLoadingExam] = useState(true);
   const [attemptId, setAttemptId] = useState<string | null>(null);
 
-  // Timer Effect
+  // Timer Effect - Only start counting after loading is complete and questions are available
   useEffect(() => {
+    if (loadingExam || questions.length === 0) return;
+
     const timer = setInterval(() => {
       setTimeElapsed((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [loadingExam, questions.length]);
 
   // Save session state to local storage
   useEffect(() => {
@@ -154,9 +160,16 @@ function PracticeContent() {
           setActiveTopic(targetExam.title);
 
           try {
-            const startRes = await mockExamApi.startExam(targetExam.id);
-            if (startRes?.data?.id) {
-              setAttemptId(startRes.data.id);
+            if (bankIdParam) {
+              const startRes = await questionBankApi.startBankAttempt(targetExam.id);
+              if (startRes?.data?.id) {
+                setAttemptId(startRes.data.id);
+              }
+            } else {
+              const startRes = await mockExamApi.startExam(targetExam.id);
+              if (startRes?.data?.id) {
+                setAttemptId(startRes.data.id);
+              }
             }
           } catch (startErr) {
             console.error("Failed to start/resume exam attempt on backend:", startErr);
@@ -225,10 +238,17 @@ function PracticeContent() {
           }
         });
 
-        await mockExamApi.submitExam(attemptId, {
-          userAnswers: backendAnswers,
-          timeTakenSeconds: timeElapsed,
-        });
+        if (bankIdParam) {
+          await questionBankApi.submitBankAttempt(attemptId, {
+            userAnswers: backendAnswers,
+            timeTakenSeconds: timeElapsed,
+          });
+        } else {
+          await mockExamApi.submitExam(attemptId, {
+            userAnswers: backendAnswers,
+            timeTakenSeconds: timeElapsed,
+          });
+        }
       } catch (submitErr) {
         console.error("Failed to submit exam attempt:", submitErr);
       }
@@ -236,10 +256,16 @@ function PracticeContent() {
 
     if (typeof window !== "undefined") {
       const todayStr = new Date().toISOString().split("T")[0];
-      const prevDailyCount = parseInt(localStorage.getItem(`daily_questions_count_${todayStr}`) || "0", 10);
+      const userPrefix = `user_${userId}_`;
+      const prevDailyCount = parseInt(
+        localStorage.getItem(`${userPrefix}daily_questions_count_${todayStr}`) ||
+        localStorage.getItem(`daily_questions_count_${todayStr}`) ||
+        "0",
+        10
+      );
       const newDailyCount = prevDailyCount + (attemptedTotal > 0 ? attemptedTotal : questions.length);
-      localStorage.setItem(`daily_questions_count_${todayStr}`, newDailyCount.toString());
-      localStorage.setItem("last_goal_date", todayStr);
+      localStorage.setItem(`${userPrefix}daily_questions_count_${todayStr}`, newDailyCount.toString());
+      localStorage.setItem(`${userPrefix}last_goal_date`, todayStr);
 
       const lastAttemptData = {
         title: topicParam || activeTopic || "Topic Practice",
@@ -251,10 +277,13 @@ function PracticeContent() {
         timestamp: Date.now(),
       };
       if (topicIdParam) {
-        localStorage.setItem(`topic_last_attempt_${topicIdParam}`, JSON.stringify(lastAttemptData));
+        localStorage.setItem(`${userPrefix}topic_last_attempt_${topicIdParam}`, JSON.stringify(lastAttemptData));
       }
       if (topicParam) {
-        localStorage.setItem(`topic_last_attempt_${topicParam}`, JSON.stringify(lastAttemptData));
+        localStorage.setItem(`${userPrefix}topic_last_attempt_${topicParam}`, JSON.stringify(lastAttemptData));
+      }
+      if (bankIdParam) {
+        localStorage.setItem(`${userPrefix}bank_last_attempt_${bankIdParam}`, JSON.stringify(lastAttemptData));
       }
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -268,6 +297,38 @@ function PracticeContent() {
       setCurrentIndex((prev) => prev + 1);
     }
   };
+
+  if (loadingExam) {
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] flex flex-col text-slate-800">
+        <PracticeHeader
+          activeTopic={activeTopic}
+          totalQuestions={0}
+          answeredCount={0}
+          timeElapsed={0}
+          onFinishTest={() => {}}
+        />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 w-full flex-1">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6 animate-pulse">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="h-6 bg-slate-200 rounded w-1/3" />
+              <div className="h-4 bg-slate-100 rounded w-24" />
+            </div>
+            <div className="space-y-4">
+              <div className="h-20 bg-slate-100 rounded-xl" />
+              <div className="h-6 bg-slate-200 rounded w-2/3" />
+            </div>
+            <div className="space-y-3 pt-2">
+              <div className="h-12 bg-slate-100 rounded-xl" />
+              <div className="h-12 bg-slate-100 rounded-xl" />
+              <div className="h-12 bg-slate-100 rounded-xl" />
+              <div className="h-12 bg-slate-100 rounded-xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!loadingExam && questions.length === 0) {
     return (

@@ -69,7 +69,31 @@ export default function MockExamsPage() {
       </div>
 
       {/* Top Grid of Practice Module Cards */}
-      {cards.length === 0 && !loading ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-5 animate-pulse flex flex-col justify-between"
+            >
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="h-5 bg-slate-200 rounded w-2/3" />
+                  <div className="h-4 bg-slate-100 rounded w-16" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="h-4 bg-slate-100 rounded w-20" />
+                  <div className="h-4 bg-slate-100 rounded w-24" />
+                </div>
+              </div>
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="h-4 bg-slate-100 rounded w-28" />
+                <div className="h-8 bg-slate-200 rounded-full w-28" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : cards.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 border border-slate-200/80 text-center space-y-3">
           <HelpCircle className="w-10 h-10 text-slate-300 mx-auto" />
           <h3 className="text-base font-bold text-slate-800">No Mock Exams Available</h3>

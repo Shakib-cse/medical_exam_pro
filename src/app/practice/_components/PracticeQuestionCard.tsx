@@ -190,28 +190,6 @@ export function PracticeQuestionCard({
             <ChevronLeft className="w-4 h-4" />
             <span>Previous</span>
           </button>
-
-          <button
-            onClick={onToggleBookmark}
-            className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full border text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${isBookmarked
-                ? "bg-amber-50 border-amber-300 text-amber-700"
-                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-              }`}
-          >
-            <Bookmark className={`w-4 h-4 ${isBookmarked ? "fill-current text-amber-600" : "text-slate-500"}`} />
-            <span>Bookmark</span>
-          </button>
-
-          <button
-            onClick={onToggleFlag}
-            className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full border text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${isFlagged
-                ? "bg-red-50 border-red-300 text-red-700"
-                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-              }`}
-          >
-            <Flag className={`w-4 h-4 ${isFlagged ? "fill-current text-red-600" : "text-slate-500"}`} />
-            <span>Flag for Review</span>
-          </button>
         </div>
 
         <button

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { ChevronRight, Loader2, HelpCircle } from "lucide-react";
 import { overviewApi } from "@/services/overviewApi";
 
@@ -27,7 +29,7 @@ function formatTitle(str: string): string {
   return formatted.replace(/:\s*([a-z])/g, (_, l) => `: ${l.toUpperCase()}`);
 }
 
-function parseTopicItem(t: any): Topic {
+function parseTopicItem(t: any, userId?: string): Topic {
   const topicId = t.id || t.title?.toLowerCase().replace(/\s+/g, "-") || `topic-${Math.random()}`;
   let correct = 0;
   let wrong = 0;
@@ -37,9 +39,12 @@ function parseTopicItem(t: any): Topic {
   let hasAttempted = false;
 
   if (typeof window !== "undefined") {
+    const userPrefix = userId ? `user_${userId}_` : "";
     const savedAttemptStr =
-      localStorage.getItem(`topic_last_attempt_${topicId}`) ||
-      localStorage.getItem(`topic_last_attempt_${t.title}`);
+      (userPrefix ? localStorage.getItem(`${userPrefix}topic_last_attempt_${topicId}`) : null) ||
+      (userPrefix ? localStorage.getItem(`${userPrefix}topic_last_attempt_${t.title}`) : null) ||
+      (!userPrefix ? localStorage.getItem(`topic_last_attempt_${topicId}`) : null) ||
+      (!userPrefix ? localStorage.getItem(`topic_last_attempt_${t.title}`) : null);
 
     if (savedAttemptStr) {
       try {
@@ -71,41 +76,29 @@ function parseTopicItem(t: any): Topic {
 }
 
 export function ClinicalProblemSolving() {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userId = user?.id || user?.email;
   const [activeFilter, setActiveFilter] = useState<"all" | "weakest" | "inProgress">("all");
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Load from local storage cache instantly on mount for 0ms render
+  // Clear stale legacy cache on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        try {
-          const parsedRaw = JSON.parse(cached);
-          if (Array.isArray(parsedRaw)) {
-            const parsed = parsedRaw.map(parseTopicItem);
-            setTopics(parsed);
-          }
-        } catch (e) {
-          console.error("Error loading cached topics:", e);
-        }
-      } else {
-        setLoading(true);
-      }
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem("admin_overview_cache");
     }
   }, []);
 
-  // Fetch latest data from backend in background asynchronously
+  // Fetch latest real data from backend
   useEffect(() => {
     async function fetchTopics() {
       try {
+        setLoading(true);
         const res = await overviewApi.getOverviewContent();
         if (res?.data?.clinical_topics?.content && Array.isArray(res.data.clinical_topics.content)) {
-          const dynamicTopics: Topic[] = res.data.clinical_topics.content.map(parseTopicItem);
+          const dynamicTopics: Topic[] = res.data.clinical_topics.content.map((t: any) => parseTopicItem(t, userId));
           setTopics(dynamicTopics);
-          if (typeof window !== "undefined") {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(res.data.clinical_topics.content));
-          }
         }
       } catch (err) {
         console.error("Failed to load clinical topics:", err);
@@ -115,7 +108,7 @@ export function ClinicalProblemSolving() {
     }
 
     fetchTopics();
-  }, []);
+  }, [userId]);
 
   const filteredTopics = topics.filter((t) => {
     if (activeFilter === "all") return true;
@@ -177,7 +170,21 @@ export function ClinicalProblemSolving() {
       </div>
 
       {/* Grid of Topic Cards */}
-      {filteredTopics.length === 0 && !loading ? (
+      {loading && topics.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs space-y-3 animate-pulse"
+            >
+              <div className="w-full h-40 sm:h-44 bg-slate-200 rounded-xl" />
+              <div className="h-5 bg-slate-200 rounded w-2/3" />
+              <div className="h-10 bg-slate-100 rounded w-full" />
+              <div className="h-10 bg-slate-200 rounded-xl w-full" />
+            </div>
+          ))}
+        </div>
+      ) : filteredTopics.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 border border-slate-200/80 text-center space-y-2">
           <HelpCircle className="w-8 h-8 text-slate-300 mx-auto" />
           <h4 className="font-bold text-slate-800 text-sm">

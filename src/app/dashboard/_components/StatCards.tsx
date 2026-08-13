@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { overviewApi, StatCardData } from "@/services/overviewApi";
 
 function RadialProgress({ percentage }: { percentage: number }) {
@@ -84,6 +86,8 @@ const defaultStats: StatCardData[] = [
 ];
 
 export function StatCards() {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userId = user?.id || user?.email;
   const [stats, setStats] = useState<StatCardData[]>(defaultStats);
   const [loading, setLoading] = useState(true);
 
@@ -115,16 +119,27 @@ export function StatCards() {
           }
         } catch (_) {}
 
-        // Scan local topic practice attempts from localStorage
+        // Scan local topic practice attempts from localStorage for current user
         let localAttempted = 0;
         let localCorrect = 0;
         let localWrong = 0;
         const localWeakTopics: Array<{ name: string; acc: number; revisit: number }> = [];
 
         if (typeof window !== "undefined") {
-          for (let i = 0; i < localStorage.length; i++) {
+          // Clear legacy un-scoped items if found
+          for (let i = localStorage.length - 1; i >= 0; i--) {
             const key = localStorage.key(i);
             if (key && key.startsWith("topic_last_attempt_")) {
+              localStorage.removeItem(key);
+            }
+          }
+
+          if (userId) {
+            const userPrefix = `user_${userId}_`;
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              const isUserTopicKey = key && key.startsWith(`${userPrefix}topic_last_attempt_`);
+              if (isUserTopicKey) {
               try {
                 const itemStr = localStorage.getItem(key);
                 if (itemStr) {
@@ -155,6 +170,7 @@ export function StatCards() {
             }
           }
         }
+      }
 
         const totalAttempted = dbAttempted + localAttempted;
         const totalCorrect = dbCorrect + localCorrect;
@@ -209,7 +225,27 @@ export function StatCards() {
     }
 
     fetchStats();
-  }, []);
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="bg-white rounded-xl px-5 py-[18px] border border-slate-200/80 shadow-sm flex items-center justify-between gap-4 animate-pulse min-h-[92px]"
+          >
+            <div className="flex flex-col space-y-2 flex-1">
+              <div className="h-2.5 bg-slate-200 rounded w-3/4" />
+              <div className="h-6 bg-slate-200 rounded w-1/2" />
+              <div className="h-2 bg-slate-100 rounded w-2/3" />
+            </div>
+            <div className="w-[50px] h-[50px] bg-slate-100 rounded-full shrink-0" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

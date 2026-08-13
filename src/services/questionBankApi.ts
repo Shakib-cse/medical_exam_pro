@@ -41,4 +41,18 @@ export const questionBankApi = {
     const res = await api.get<ApiResponse<QuestionBankItemData>>(`/question-bank/${id}`);
     return res.data;
   },
+
+  startBankAttempt: async (bankId: string) => {
+    const res = await api.post<ApiResponse<any>>(`/question-bank/${bankId}/start`);
+    return res.data;
+  },
+
+  submitBankAttempt: async (
+    attemptId: string,
+    payload: { userAnswers: Record<string, number>; timeTakenSeconds: number }
+  ) => {
+    const res = await api.post<ApiResponse<any>>(`/question-bank/attempt/${attemptId}/submit`, payload);
+    return res.data;
+  },
 };
+

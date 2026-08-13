@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { Loader2, AlertCircle } from "lucide-react";
 import { overviewApi, DailyGoalData } from "@/services/overviewApi";
 
@@ -11,6 +13,8 @@ const defaultGoalConfig: DailyGoalData = {
 };
 
 export function SideGoalWidget() {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userId = user?.id || user?.email;
   const [goalConfig, setGoalConfig] = useState<DailyGoalData>(defaultGoalConfig);
   const [loading, setLoading] = useState(true);
   const [questionsToday, setQuestionsToday] = useState(0);
@@ -26,26 +30,39 @@ export function SideGoalWidget() {
 
         let dynamicWeakest: Array<{ name: string; score: string }> = [];
 
-        // 1. Scan localStorage for clinical topic test attempts (<50% accuracy score)
+        // 1. Scan localStorage for clinical topic test attempts (<50% accuracy score) for current user
         if (typeof window !== "undefined") {
-          for (let i = 0; i < localStorage.length; i++) {
+          // Clear legacy un-scoped items if found
+          for (let i = localStorage.length - 1; i >= 0; i--) {
             const key = localStorage.key(i);
             if (key && key.startsWith("topic_last_attempt_")) {
-              try {
-                const rawName = key.replace("topic_last_attempt_", "").replace(/-/g, " ");
-                const saved = JSON.parse(localStorage.getItem(key) || "{}");
-                const formattedName = saved.title || (rawName.charAt(0).toUpperCase() + rawName.slice(1));
+              localStorage.removeItem(key);
+            }
+          }
 
-                if (typeof saved.accuracyPct === "number" && saved.accuracyPct < 50) {
-                  if (!dynamicWeakest.some((t) => t.name.toLowerCase() === formattedName.toLowerCase())) {
-                    dynamicWeakest.push({
-                      name: formattedName,
-                      score: `${saved.accuracyPct}%`,
-                    });
+          if (userId) {
+            const userPrefix = `user_${userId}_`;
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              const isUserTopicKey = key && key.startsWith(`${userPrefix}topic_last_attempt_`);
+
+              if (isUserTopicKey) {
+                try {
+                  const rawName = key.replace(`${userPrefix}topic_last_attempt_`, "").replace(/-/g, " ");
+                  const saved = JSON.parse(localStorage.getItem(key) || "{}");
+                  const formattedName = saved.title || (rawName.charAt(0).toUpperCase() + rawName.slice(1));
+
+                  if (typeof saved.accuracyPct === "number" && saved.accuracyPct < 50) {
+                    if (!dynamicWeakest.some((t) => t.name.toLowerCase() === formattedName.toLowerCase())) {
+                      dynamicWeakest.push({
+                        name: formattedName,
+                        score: `${saved.accuracyPct}%`,
+                      });
+                    }
                   }
+                } catch (e) {
+                  console.error("Error reading topic attempt from localStorage:", e);
                 }
-              } catch (e) {
-                console.error("Error reading topic attempt from localStorage:", e);
               }
             }
           }
@@ -67,13 +84,10 @@ export function SideGoalWidget() {
           });
         }
 
-        // 3. Fallback to admin configured weakest topics if set
-        if (dynamicWeakest.length === 0 && contentRes.status === "fulfilled" && contentRes.value?.data?.daily_goal?.content) {
-          const goalData = contentRes.value.data.daily_goal.content;
-          if (Array.isArray(goalData.weakestTopics) && goalData.weakestTopics.length > 0) {
-            dynamicWeakest = goalData.weakestTopics;
-          }
-        }
+        // Clean any invalid score formats (e.g. non-percentage strings)
+        dynamicWeakest = dynamicWeakest.filter(
+          (t) => t.name && typeof t.score === "string" && (t.score.endsWith("%") || !isNaN(Number(t.score)))
+        );
 
         let targetVal = 50;
         if (contentRes.status === "fulfilled" && contentRes.value?.data?.daily_goal?.content?.goalTarget) {
@@ -87,14 +101,23 @@ export function SideGoalWidget() {
 
         if (typeof window !== "undefined") {
           const todayStr = new Date().toISOString().split("T")[0];
-          const lastDate = localStorage.getItem("last_goal_date");
+          const userPrefix = userId ? `user_${userId}_` : "";
+          const lastDateKey = `${userPrefix}last_goal_date`;
+          const dailyCountKey = `${userPrefix}daily_questions_count_${todayStr}`;
+          const lastDate = localStorage.getItem(lastDateKey) || (!userPrefix ? localStorage.getItem("last_goal_date") : null);
+
           if (lastDate !== todayStr) {
             // New day: reset today's tracked questions to 0
-            localStorage.setItem("last_goal_date", todayStr);
-            localStorage.setItem(`daily_questions_count_${todayStr}`, "0");
+            localStorage.setItem(lastDateKey, todayStr);
+            localStorage.setItem(dailyCountKey, "0");
             setQuestionsToday(0);
           } else {
-            const count = parseInt(localStorage.getItem(`daily_questions_count_${todayStr}`) || "0", 10);
+            const count = parseInt(
+              localStorage.getItem(dailyCountKey) ||
+              (!userPrefix ? localStorage.getItem(`daily_questions_count_${todayStr}`) : null) ||
+              "0",
+              10
+            );
             setQuestionsToday(count);
           }
         } else if (statsRes.status === "fulfilled" && statsRes.value?.data) {
@@ -110,12 +133,31 @@ export function SideGoalWidget() {
     }
 
     fetchGoalData();
-  }, []);
+  }, [userId]);
 
   const progressPct =
     goalConfig.goalTarget > 0
       ? Math.min(100, Math.round((questionsToday / goalConfig.goalTarget) * 100))
       : 0;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200/70 p-6 shadow-2xs space-y-4 animate-pulse">
+          <div className="h-3 bg-slate-200 rounded w-1/2 mx-auto" />
+          <div className="h-9 bg-slate-200 rounded w-1/3 mx-auto" />
+          <div className="h-3.5 bg-slate-100 rounded-full w-full" />
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200/70 p-6 shadow-2xs space-y-4 animate-pulse">
+          <div className="h-4 bg-slate-200 rounded w-1/3" />
+          <div className="space-y-3 pt-2">
+            <div className="h-8 bg-slate-100 rounded" />
+            <div className="h-8 bg-slate-100 rounded" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -125,7 +167,6 @@ export function SideGoalWidget() {
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block text-center flex-1">
             CURRENT GOAL PROGRESS
           </span>
-          {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-600" />}
         </div>
 
         <div className="text-center space-y-1">
