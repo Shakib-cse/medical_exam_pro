@@ -18,6 +18,7 @@ export interface QuestionBankItemData {
   type: string; // "Clinical" | "SJT"
   difficultyBadge: string;
   difficultyType: "moderate" | "advanced" | "clinical" | "standard";
+  durationMinutes?: number;
   questionCount: number;
   questions?: QuestionBankQuestion[];
   avgAcc: string;

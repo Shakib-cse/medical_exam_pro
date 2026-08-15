@@ -111,6 +111,11 @@ export default function QuestionBankPage() {
   });
 
   const selectedItem = bankItems.find((item) => item.id === selectedId) || filteredItems[0] || bankItems[0];
+  const currentQCount = selectedItem
+    ? (selectedItem.questions && selectedItem.questions.length > 0
+      ? selectedItem.questions.length
+      : (selectedItem.questionCount || 0))
+    : 0;
 
   const handleStartSession = () => {
     if (selectedItem) {
@@ -244,21 +249,19 @@ export default function QuestionBankPage() {
               const isSelected = selectedId === item.id;
               const isPD = item.type === "SJT" || item.type === "Professional Dilemmas" || item.category === "Professional Dilemmas" || item.category === "SJT";
 
-              let displayIsUnattempted = item.isUnattempted;
-              let displayLastAttempted = item.lastAttempted ? formatDaysAgo(item.lastAttempted) : "Today";
-              let displayAvgAcc = item.avgAcc;
+              let displayIsUnattempted = item.isUnattempted ?? true;
+              let displayLastAttempted = item.lastAttempted ? formatDaysAgo(item.lastAttempted) : undefined;
+              let displayAvgAcc = item.avgAcc || "N/A";
 
-              // Check localStorage for local attempt fallback
-              if (typeof window !== "undefined") {
+              // Check localStorage for local attempt fallback using unique bank ID
+              if (typeof window !== "undefined" && item.id) {
                 try {
                   let foundAttempt: any = null;
+                  const bankKey = `bank_last_attempt_${item.id}`;
+
                   for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
-                    if (
-                      key &&
-                      (key.endsWith(`bank_last_attempt_${item.id}`) ||
-                        key.endsWith(`topic_last_attempt_${item.title}`))
-                    ) {
+                    if (key && key.endsWith(bankKey)) {
                       const val = localStorage.getItem(key);
                       if (val) {
                         try {
@@ -279,6 +282,10 @@ export default function QuestionBankPage() {
                     }
                   }
                 } catch (_) { }
+              }
+
+              if (displayIsUnattempted) {
+                displayAvgAcc = "N/A";
               }
 
               return (
@@ -340,21 +347,30 @@ export default function QuestionBankPage() {
 
           {/* Panel 1: Create Custom Session */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-            <h4 className="font-bold text-slate-900 text-base">
-              Create Custom Session
-            </h4>
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold text-brand-orange uppercase tracking-wider">
+                Create Custom Session
+              </span>
+              <h4 className="font-bold text-slate-900 text-base leading-snug truncate">
+                {selectedItem ? selectedItem.title : "Select a Question Module"}
+              </h4>
+            </div>
 
             <div className="space-y-2 border-y border-slate-100 py-3 text-xs">
               <div className="flex justify-between items-center text-slate-500">
                 <span>Selected Questions</span>
                 <span className="font-extrabold text-slate-900 text-sm">
-                  {selectedItem ? selectedItem.questionCount || 12 : 12}
+                  {currentQCount} {currentQCount === 1 ? "Question" : "Questions"}
                 </span>
               </div>
               <div className="flex justify-between items-center text-slate-500">
                 <span>Est. Completion Time</span>
                 <span className="font-extrabold text-slate-900 text-sm">
-                  {selectedItem ? Math.max(10, Math.round((selectedItem.questionCount || 12) * 1.5)) : 18} mins
+                  {currentQCount > 0
+                    ? `${(selectedItem?.durationMinutes && selectedItem.durationMinutes !== 15)
+                        ? selectedItem.durationMinutes
+                        : Math.max(1, Math.ceil(currentQCount * 1.5))} mins`
+                    : "0 mins"}
                 </span>
               </div>
             </div>
@@ -366,10 +382,6 @@ export default function QuestionBankPage() {
               >
                 Start Practice Session
               </button>
-
-              {/* <button className="w-full py-2.5 px-4 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer text-center">
-                Save for Later
-              </button> */}
             </div>
           </div>
 

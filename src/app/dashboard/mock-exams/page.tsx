@@ -177,13 +177,12 @@ export default function MockExamsPage() {
                 <th className="py-4 px-6">EXAM TYPE</th>
                 <th className="py-4 px-6">SCORE</th>
                 <th className="py-4 px-6">TIME TAKEN</th>
-                <th className="py-4 px-6">ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {latestHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400 font-medium italic">
+                  <td colSpan={4} className="py-8 text-center text-slate-400 font-medium italic">
                     No attempt history recorded yet. Complete a mock exam to view your scores here.
                   </td>
                 </tr>
@@ -208,14 +207,6 @@ export default function MockExamsPage() {
                     </td>
                     <td className="py-4 px-6 font-medium text-slate-600">
                       {row.timeTaken}
-                    </td>
-                    <td className="py-4 px-6">
-                      <Link
-                        href={`/practice?topic=${encodeURIComponent(row.examType)}&examId=${row.mockExamId || ""}`}
-                        className="text-brand-orange hover:text-brand-orange/80 font-bold text-xs hover:underline cursor-pointer"
-                      >
-                        Review Answers
-                      </Link>
                     </td>
                   </tr>
                 ))
