@@ -45,6 +45,7 @@ export interface MockExamDetail {
   difficultyType: string;
   durationMinutes: number;
   questionCount: number;
+  category?: string;
   questions: MockQuestion[];
 }
 

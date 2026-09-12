@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Home,
   Clock,
   Settings,
-  CreditCard,
+  Headphones,
+  Stethoscope,
+  Scale,
   Menu,
   X,
 } from "lucide-react";
@@ -18,45 +20,51 @@ interface SidebarProps {
   className?: string;
 }
 
-// Question Bank Icon matching the exact rounded document / list icon in the image
-function QuestionBankIcon({ className, strokeWidth = 1.8 }: { className?: string; strokeWidth?: number }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
-      <line x1="8" y1="8.5" x2="16" y2="8.5" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-      <line x1="8" y1="15.5" x2="16" y2="15.5" />
-    </svg>
-  );
-}
-
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navSections = [
+  const currentType = searchParams.get("type");
+
+  const mainNavItems = [
+    { label: "Dashboard", href: "/dashboard", icon: Home, exact: true },
     {
-      title: "LEARNING",
-      items: [
-        { label: "Dashboard", href: "/dashboard", icon: Home },
-        { label: "Question Bank", href: "/dashboard/question-bank", icon: QuestionBankIcon },
-        { label: "Mock Exams", href: "/dashboard/mock-exams", icon: Clock },
-      ],
+      label: "Clinical Problem Solving",
+      href: "/dashboard/clinical-problem-solving",
+      icon: Stethoscope,
+      match: () =>
+        pathname.startsWith("/dashboard/clinical-problem-solving") ||
+        (pathname.includes("/question-bank") && currentType === "Clinical"),
     },
     {
-      title: "PERSONAL",
-      items: [
-        { label: "Subscription", href: "/dashboard/subscription", icon: CreditCard },
-        { label: "Settings", href: "/dashboard/settings", icon: Settings },
-      ],
+      label: "Professional Dilemmas",
+      href: "/dashboard/professional-dilemmas",
+      icon: Scale,
+      match: () =>
+        pathname.startsWith("/dashboard/professional-dilemmas") ||
+        (pathname.includes("/question-bank") && currentType === "SJT"),
+    },
+    {
+      label: "Mock Exams",
+      href: "/dashboard/mock-exams",
+      icon: Clock,
+      match: () => pathname.startsWith("/dashboard/mock-exams"),
+    },
+  ];
+
+  const bottomNavItems = [
+    {
+      label: "Help & Support",
+      href: "/dashboard/support",
+      icon: Headphones,
+      match: () => pathname.startsWith("/dashboard/support"),
+    },
+    {
+      label: "Settings",
+      href: "/dashboard/settings",
+      icon: Settings,
+      match: () => pathname.startsWith("/dashboard/settings"),
     },
   ];
 
@@ -82,7 +90,7 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Sidebar container */}
       <aside
         className={cn(
-          "fixed top-0 left-0 bottom-0 z-40 w-64 bg-[#0d2035] text-[#97afc7] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 border-r border-[#152e4a]/80 select-none",
+          "fixed top-0 left-0 bottom-0 z-40 w-64 bg-[#082138] text-[#97afc7] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 border-r border-[#152e4a]/80 select-none",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           className
         )}
@@ -101,51 +109,76 @@ export function Sidebar({ className }: SidebarProps) {
           </Link>
         </div>
 
-        {/* Navigation Content */}
-        <div className="flex-1 py-6 px-3.5 space-y-6 overflow-y-auto custom-scrollbar">
-          {navSections.map((section, sIdx) => (
-            <div key={sIdx} className="space-y-1.5">
-              <h4 className="px-3.5 text-[11px] font-bold text-[#4e6f90] uppercase tracking-[0.14em]">
-                {section.title}
-              </h4>
-              <nav className="space-y-1">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        {/* Main Navigation Content */}
+        <div className="flex-1 py-6 px-3.5 space-y-1.5 overflow-y-auto custom-scrollbar">
+          <nav className="space-y-1.5">
+            {mainNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.match
+                ? item.match()
+                : item.exact
+                ? pathname === item.href
+                : pathname.startsWith(item.href);
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-[14px] transition-all duration-150",
-                        isActive
-                          ? "bg-[#184877] text-white font-semibold shadow-xs"
-                          : "text-[#97afc7] hover:text-white hover:bg-white/[0.04] font-medium"
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          "w-5 h-5 shrink-0 transition-colors",
-                          isActive ? "text-white" : "text-[#97afc7]"
-                        )}
-                        strokeWidth={1.8}
-                      />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-          ))}
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-[13.5px] transition-all duration-150",
+                    isActive
+                      ? "bg-[#144372] text-white font-semibold shadow-xs"
+                      : "text-[#97afc7] hover:text-white hover:bg-white/[0.04] font-medium"
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "w-4.5 h-4.5 shrink-0 transition-colors",
+                      isActive ? "text-white" : "text-[#829bb5]"
+                    )}
+                    strokeWidth={1.8}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Footer/Version Info */}
-        <div className="p-4 border-t border-[#152e4a]/70 text-[11px] text-[#4e6f90] text-center">
-          MedicalExamPro &copy; {new Date().getFullYear()}
+        {/* Bottom Navigation */}
+        <div className="p-3.5 border-t border-[#152e4a]/70 space-y-1.5">
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.match ? item.match() : pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-[13.5px] transition-all duration-150",
+                  isActive
+                    ? "bg-[#144372] text-white font-semibold shadow-xs"
+                    : "text-[#97afc7] hover:text-white hover:bg-white/[0.04] font-medium"
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "w-4.5 h-4.5 shrink-0 transition-colors",
+                    isActive ? "text-white" : "text-[#829bb5]"
+                  )}
+                  strokeWidth={1.8}
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+
+          <div className="pt-2 text-[11px] text-[#4e6f90] text-center">
+            MedicalExamPro &copy; {new Date().getFullYear()}
+          </div>
         </div>
       </aside>
     </>

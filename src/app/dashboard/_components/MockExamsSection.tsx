@@ -103,7 +103,7 @@ export function MockExamsSection() {
 
             {/* Action Button */}
             <Link
-              href={`/practice?topic=${encodeURIComponent(exam.title)}&examId=${exam.id}`}
+              href={`/practice/mock-exam?topic=${encodeURIComponent(exam.title)}&examId=${exam.id}&mockId=${exam.id}`}
               className="w-full py-2 px-4 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-brand-orange/20 transition-all active:scale-95 cursor-pointer"
             >
               <span>{exam.actionText || "Start"}</span>

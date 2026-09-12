@@ -278,7 +278,7 @@ export function ClinicalProblemSolving() {
               {/* Action Button */}
               <div className="pt-3">
                 <Link
-                  href={`/practice?topicId=${encodeURIComponent(topic.id)}&topic=${encodeURIComponent(topic.title)}`}
+                  href={`/practice/clinical?topicId=${encodeURIComponent(topic.id)}&topic=${encodeURIComponent(topic.title)}`}
                   className="w-full py-2.5 sm:py-3 px-4 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-brand-orange/20 transition-all active:scale-95 cursor-pointer"
                 >
                   <span>Start Practicing</span>

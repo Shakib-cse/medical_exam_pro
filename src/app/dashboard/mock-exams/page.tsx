@@ -2,218 +2,231 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Clock, HelpCircle, Loader2, FileText } from "lucide-react";
-import { mockExamApi, MockExamCardData, MockExamHistoryRow } from "@/services/mockExamApi";
+import { Info, Trophy, Calendar } from "lucide-react";
+import { mockExamApi } from "@/services/mockExamApi";
+
+interface MockCardItem {
+  id: string;
+  mockNumber: number;
+  title: string;
+  isCompleted: boolean;
+  score: number;
+  dateTaken: string;
+  duration?: string;
+  questions?: number;
+}
+
+const defaultMockList: MockCardItem[] = [
+  { id: "mock-1", mockNumber: 1, title: "Mock Exam 1", isCompleted: true, score: 74, dateTaken: "12 Aug, 2026" },
+  { id: "mock-2", mockNumber: 2, title: "Mock Exam 2", isCompleted: true, score: 69, dateTaken: "12 Aug, 2026" },
+  { id: "mock-3", mockNumber: 3, title: "Mock Exam 3", isCompleted: true, score: 85, dateTaken: "12 Aug, 2026" },
+  { id: "mock-4", mockNumber: 4, title: "Mock Exam 4", isCompleted: true, score: 62, dateTaken: "12 Aug, 2026" },
+  { id: "mock-5", mockNumber: 5, title: "Mock Exam 5", isCompleted: true, score: 58, dateTaken: "12 Aug, 2026" },
+  { id: "mock-6", mockNumber: 6, title: "Mock Exam 6", isCompleted: false, score: 0, dateTaken: "Not attempted yet" },
+  { id: "mock-7", mockNumber: 7, title: "Mock Exam 7", isCompleted: false, score: 0, dateTaken: "Not attempted yet" },
+  { id: "mock-8", mockNumber: 8, title: "Mock Exam 8", isCompleted: false, score: 0, dateTaken: "Not attempted yet" },
+  { id: "mock-9", mockNumber: 9, title: "Mock Exam 9", isCompleted: false, score: 0, dateTaken: "Not attempted yet" },
+  { id: "mock-10", mockNumber: 10, title: "Mock Exam 10", isCompleted: false, score: 0, dateTaken: "Not attempted yet" },
+];
 
 export default function MockExamsPage() {
-  const [cards, setCards] = useState<MockExamCardData[]>([]);
-  const [history, setHistory] = useState<MockExamHistoryRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [mockList, setMockList] = useState<MockCardItem[]>(defaultMockList);
 
   useEffect(() => {
-    async function fetchData() {
+    async function loadData() {
       try {
-        setLoading(true);
-        const [examsRes, historyRes] = await Promise.allSettled([
-          mockExamApi.getMockExams(),
-          mockExamApi.getExamHistory(),
-        ]);
-
-        if (examsRes.status === "fulfilled" && examsRes.value?.data) {
-          setCards(examsRes.value.data);
-        }
-
-        if (historyRes.status === "fulfilled" && historyRes.value?.data) {
-          setHistory(historyRes.value.data);
+        const res = await mockExamApi.getMockExams();
+        if (res?.data && res.data.length > 0) {
+          const mapped: MockCardItem[] = res.data.map((item, idx) => ({
+            id: item.id,
+            mockNumber: idx + 1,
+            title: item.title || `Mock Exam ${idx + 1}`,
+            isCompleted: !item.notAttempted && Boolean(item.bestScore),
+            score: item.bestScore ? parseInt(item.bestScore) || 70 : 0,
+            dateTaken: item.notAttempted ? "Not attempted yet" : "12 Aug, 2026",
+            duration: item.duration,
+            questions: item.questions,
+          }));
+          setMockList(mapped);
         }
       } catch (err) {
-        console.error("Failed to load mock exams dynamically:", err);
-      } finally {
-        setLoading(false);
+        console.warn("Using fallback mock exams list:", err);
       }
     }
-
-    fetchData();
+    loadData();
   }, []);
 
-  // Deduplicate history by exam card (keep only the latest attempt per exam card)
-  const latestHistory = history.reduce<MockExamHistoryRow[]>((acc, row) => {
-    const key = row.mockExamId || row.examType;
-    const exists = acc.some(
-      (item) => (item.mockExamId && item.mockExamId === key) || item.examType === key
-    );
-    if (!exists) {
-      acc.push(row);
-    }
-    return acc;
-  }, []);
+  const completedCount = mockList.filter((m) => m.isCompleted).length;
+  const totalCount = mockList.length;
+  const completedMocks = mockList.filter((m) => m.isCompleted && m.score > 0);
+  const avgScore =
+    completedMocks.length > 0
+      ? Math.round(
+          completedMocks.reduce((acc, curr) => acc + curr.score, 0) /
+            completedMocks.length
+        )
+      : 72;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Exam Centre
-          </h2>
-          <p className="text-slate-500 text-xs sm:text-sm">
-            Refine your exam technique with full-length simulations and targeted practice modules.
-          </p>
-        </div>
-        {loading && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-cyan-600 bg-cyan-50 px-3 py-1.5 rounded-full border border-cyan-200">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-600" />
-            <span>Syncing Exam Data...</span>
-          </div>
-        )}
+    <div className="space-y-6 sm:space-y-7 pb-10 w-full">
+      {/* 1. Page Header */}
+      <div className="space-y-1">
+        <h1 className="text-2xl sm:text-[32px] lg:text-[38px] font-bold text-[#141B25] tracking-tight leading-tight">
+          Mock Exams
+        </h1>
+        <p className="text-slate-500 text-xs sm:text-sm lg:text-[16px] font-normal">
+          Practice full-length timed mocks in the real MSRA sequence.
+        </p>
       </div>
 
-      {/* Top Grid of Practice Module Cards */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-5 animate-pulse flex flex-col justify-between"
-            >
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="h-5 bg-slate-200 rounded w-2/3" />
-                  <div className="h-4 bg-slate-100 rounded w-16" />
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="h-4 bg-slate-100 rounded w-20" />
-                  <div className="h-4 bg-slate-100 rounded w-24" />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div className="h-4 bg-slate-100 rounded w-28" />
-                <div className="h-8 bg-slate-200 rounded-full w-28" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : cards.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 border border-slate-200/80 text-center space-y-3">
-          <HelpCircle className="w-10 h-10 text-slate-300 mx-auto" />
-          <h3 className="text-base font-bold text-slate-800">No Mock Exams Available</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            New mock exams created by administrators in the Admin Dashboard will automatically appear here.
+      {/* 2. Top Stats: 2 Cards (Spanning 50% each on md+) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 w-full">
+        {/* Card 1: Questions Attempted */}
+        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-[#E0E4EA] shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex flex-col justify-center min-h-[160px] space-y-2">
+          <p className="text-xs sm:text-[13.5px] font-medium text-[#64748B]">
+            Questions Attempted
           </p>
+          <div className="text-3xl sm:text-4xl lg:text-[42px] font-bold text-[#141B25] tracking-tight">
+            {String(completedCount).padStart(2, "0")} / {String(totalCount).padStart(2, "0")}
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {cards.map((card) => (
-            <div
-              key={card.id}
-              className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all space-y-5 flex flex-col justify-between"
-            >
-              <div className="space-y-4">
-                {/* Header: Title & Difficulty Badge */}
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-bold text-slate-900 text-base leading-snug">
-                    {card.title}
-                  </h3>
+
+        {/* Card 2: Average Score with Donut Gauge */}
+        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-[#E0E4EA] shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex items-center justify-between min-h-[160px]">
+          <div className="space-y-2">
+            <p className="text-xs sm:text-[13.5px] font-medium text-[#64748B]">Average Score</p>
+            <div className="text-3xl sm:text-4xl lg:text-[42px] font-bold text-[#141B25] tracking-tight">
+              {avgScore}%
+            </div>
+          </div>
+
+          {/* Radial Ring with Inner Disc and Gap Margin */}
+          <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
+            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 80 80">
+              {/* Inner soft filled disc with white gap margin */}
+              <circle cx="40" cy="40" r="23.5" fill="#F1F5F9" />
+              {/* Outer Track background circle */}
+              <circle
+                cx="40"
+                cy="40"
+                r="33"
+                stroke="#EDF2F7"
+                strokeWidth="6.5"
+                fill="none"
+              />
+              {/* Outer Progress Blue Ring with butt linecap */}
+              <circle
+                cx="40"
+                cy="40"
+                r="33"
+                stroke="#1D82EB"
+                strokeWidth="6.5"
+                strokeDasharray={2 * Math.PI * 33}
+                strokeDashoffset={(2 * Math.PI * 33) * (1 - avgScore / 100)}
+                strokeLinecap="butt"
+                fill="none"
+                className="transition-all duration-700 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-[11px] sm:text-xs font-bold text-[#0F172A]">
+                {avgScore}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Grid of Mock Exam Cards (4 Columns) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 w-full">
+        {mockList.map((mock) => (
+          <div
+            key={mock.id}
+            className="bg-white rounded-2xl p-5 sm:p-6 border border-[#E0E4EA] shadow-[0_4px_16px_rgba(0,0,0,0.02)] hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-4"
+          >
+            {/* Header: Title + Status Badge */}
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-bold text-[#141B25] text-base sm:text-[17px]">
+                {mock.title}
+              </h3>
+              <span
+                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                  mock.isCompleted
+                    ? "bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0]"
+                    : "bg-[#F1F3F6] text-[#64748B] border border-[#E0E4EA]"
+                }`}
+              >
+                {mock.isCompleted ? "Completed" : "Not attempted"}
+              </span>
+            </div>
+
+            {/* Score & Taken Date */}
+            <div className="space-y-2 text-xs sm:text-[13px]">
+              <div className="flex items-center gap-2">
+                <Trophy
+                  className={`w-4 h-4 shrink-0 ${
+                    mock.isCompleted ? "text-[#059669]" : "text-slate-400"
+                  }`}
+                />
+                <span className="font-bold text-slate-700">
+                  Score:{" "}
                   <span
-                    className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md tracking-wider uppercase ${card.difficultyType === "advanced"
-                      ? "bg-rose-100 text-rose-700"
-                      : card.difficultyType === "clinical"
-                        ? "bg-sky-100 text-sky-700"
-                        : card.difficultyType === "standard"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-orange-100 text-orange-700"
-                      }`}
+                    className={
+                      mock.isCompleted ? "text-[#059669] font-bold" : "text-slate-700 font-bold"
+                    }
                   >
-                    {card.difficultyBadge}
+                    {mock.score}%
                   </span>
-                </div>
-
-                {/* Sub-info: Duration & Questions */}
-                <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{card.duration}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{card.questions} Questions</span>
-                  </div>
-                </div>
+                </span>
               </div>
-
-              {/* Bottom Row: Score & Start Practice Button */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div>
-                  {card.notAttempted || !card.bestScore ? (
-                    <span className="text-xs font-semibold text-slate-400">
-                      Not Attempted Yet
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-500 font-medium">
-                      Best Score: <span className="font-extrabold text-slate-900">{card.bestScore}</span>
-                    </span>
-                  )}
-                </div>
-
-                <Link
-                  href={`/practice?topic=${encodeURIComponent(card.title)}&examId=${card.id}`}
-                  className="px-5 py-2 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white text-xs font-bold transition-all shadow-md shadow-brand-orange/20 cursor-pointer active:scale-95"
-                >
-                  {card.actionText || "Start Practice"}
-                </Link>
+              <div className="flex items-center gap-2 text-slate-500 font-medium">
+                <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                <span>Taken on: {mock.dateTaken}</span>
               </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Bottom Table: Exam History (Shows 1 row per exam card with the latest score) */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden space-y-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                <th className="py-4 px-6">DATE</th>
-                <th className="py-4 px-6">EXAM TYPE</th>
-                <th className="py-4 px-6">SCORE</th>
-                <th className="py-4 px-6">TIME TAKEN</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {latestHistory.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-400 font-medium italic">
-                    No attempt history recorded yet. Complete a mock exam to view your scores here.
-                  </td>
-                </tr>
+            {/* Actions */}
+            <div className="pt-2 flex flex-col gap-2">
+              {mock.isCompleted ? (
+                <>
+                  <Link
+                    href={`/practice/mock-exam?mockId=${mock.id}&mode=retake`}
+                    className="w-full py-2.5 rounded-full bg-[#F97316] hover:bg-[#EA580C] text-white text-xs sm:text-[13px] font-bold text-center transition-all shadow-xs cursor-pointer"
+                  >
+                    Retake
+                  </Link>
+                  <Link
+                    href={`/practice/result?mockId=${mock.id}`}
+                    className="w-full text-center text-xs sm:text-[13px] font-semibold text-[#1D82EB] hover:text-[#1875d2] transition-colors cursor-pointer pt-1"
+                  >
+                    View Result
+                  </Link>
+                </>
               ) : (
-                latestHistory.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-6 font-medium text-slate-600">
-                      {row.date}
-                    </td>
-                    <td className="py-4 px-6 font-bold text-slate-900">
-                      {row.examType}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`font-black text-xs px-2 py-0.5 rounded-md ${row.scoreColor === "green"
-                          ? "bg-[#c6f6d5] text-[#10b981]"
-                          : "bg-red-100 text-red-700"
-                          }`}
-                      >
-                        {row.score}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 font-medium text-slate-600">
-                      {row.timeTaken}
-                    </td>
-                  </tr>
-                ))
+                <Link
+                  href={`/practice/mock-exam?mockId=${mock.id}&mode=start`}
+                  className="w-full py-2.5 rounded-full bg-[#F97316] hover:bg-[#EA580C] text-white text-xs sm:text-[13px] font-bold text-center transition-all shadow-xs cursor-pointer"
+                >
+                  Start Mock
+                </Link>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 4. Bottom Info Banner */}
+      <div className="bg-[#eaf4fe] border border-[#c6e1fc] rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-slate-700">
+        <div className="w-5 h-5 rounded-full bg-[#1875d2] text-white flex items-center justify-center shrink-0 mt-0.5">
+          <Info className="w-3.5 h-3.5" />
         </div>
+        <p className="text-xs sm:text-[13px] leading-relaxed text-slate-600 font-medium">
+          These are timed, full-length MSRA-style mock exams designed to closely
+          replicate the real exam sequence. Each mock starts with Professional
+          Dilemmas (50 questions in 45 minutes), followed by Clinical Problem
+          Solving (86 questions in 75 minutes). The sequence is fixed to mirror
+          the actual MSRA format and includes a short break between sections.
+        </p>
       </div>
     </div>
   );

@@ -1,386 +1,152 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
 import Link from "next/link";
-import { HelpCircle } from "lucide-react";
-import { mockExamApi } from "@/services/mockExamApi";
-import { questionBankApi } from "@/services/questionBankApi";
-import { overviewApi } from "@/services/overviewApi";
-import { PracticeHeader } from "./_components/PracticeHeader";
-import { PracticeQuestionCard, QuestionItem } from "./_components/PracticeQuestionCard";
+import { Stethoscope, Scale, FileText, ArrowRight, Sparkles, HelpCircle } from "lucide-react";
 
-const STORAGE_KEY = "medicalexampro_practice_session";
-
-function PracticeContent() {
+function PracticeRouter() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const user = useSelector((state: RootState) => state.auth.user);
-  const userId = user?.id || user?.email || "guest";
-  const examIdParam = searchParams.get("examId");
-  const bankIdParam = searchParams.get("bankId");
-  const topicIdParam = searchParams.get("topicId");
-  const topicParam = searchParams.get("topic") || "Mock Practice Exam";
 
-  const [questions, setQuestions] = useState<QuestionItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
-  const [bookmarked, setBookmarked] = useState<Record<number, boolean>>({});
-  const [flagged, setFlagged] = useState<Record<number, boolean>>({});
-  const [timeElapsed, setTimeElapsed] = useState(0);
-  const [activeTopic, setActiveTopic] = useState(topicParam);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadingExam, setLoadingExam] = useState(true);
-  const [attemptId, setAttemptId] = useState<string | null>(null);
-
-  // Timer Effect - Only start counting after loading is complete and questions are available
   useEffect(() => {
-    if (loadingExam || questions.length === 0) return;
+    const mockId = searchParams.get("mockId");
+    const examId = searchParams.get("examId");
+    const domainId = searchParams.get("domainId");
+    const type = searchParams.get("type");
+    const speciality = searchParams.get("speciality");
+    const topic = searchParams.get("topic") || "";
+    const topicId = searchParams.get("topicId");
+    const bankId = searchParams.get("bankId");
 
-    const timer = setInterval(() => {
-      setTimeElapsed((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [loadingExam, questions.length]);
+    const queryStr = searchParams.toString();
 
-  // Save session state to local storage
-  useEffect(() => {
-    if (!isLoaded) return;
-    const sessionData = {
-      currentIndex,
-      userAnswers,
-      bookmarked,
-      flagged,
-      timeElapsed,
-      activeTopic,
-      attemptId,
-    };
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionData));
-    } catch (e) {
-      console.error("Failed to save practice session:", e);
-    }
-  }, [currentIndex, userAnswers, bookmarked, flagged, timeElapsed, activeTopic, attemptId, isLoaded]);
-
-  // Restore session on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.currentIndex !== undefined) setCurrentIndex(parsed.currentIndex);
-        if (parsed.userAnswers) setUserAnswers(parsed.userAnswers);
-        if (parsed.bookmarked) setBookmarked(parsed.bookmarked);
-        if (parsed.flagged) setFlagged(parsed.flagged);
-        if (parsed.timeElapsed) setTimeElapsed(parsed.timeElapsed);
-        if (parsed.activeTopic) setActiveTopic(parsed.activeTopic);
-        if (parsed.attemptId) setAttemptId(parsed.attemptId);
-      }
-    } catch (e) {
-      console.error("Failed to restore practice session:", e);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
-
-  // Fetch dynamic questions from backend
-  useEffect(() => {
-    async function loadDynamicExam() {
-      try {
-        setLoadingExam(true);
-        let targetExam: any = null;
-
-        // Check Clinical Topics
-        if (topicIdParam || (topicParam && !examIdParam && !bankIdParam)) {
-          try {
-            const overviewRes = await overviewApi.getOverviewContent();
-            if (overviewRes?.data?.clinical_topics?.content) {
-              const topicList: any[] = overviewRes.data.clinical_topics.content;
-              const matchedTopic = topicList.find(
-                (t) => t.id === topicIdParam || t.title.toLowerCase() === topicParam.toLowerCase()
-              );
-
-              if (matchedTopic && matchedTopic.questions?.length > 0) {
-                targetExam = {
-                  title: matchedTopic.title,
-                  category: "Clinical Problem Solving",
-                  difficultyBadge: "Moderate",
-                  durationMinutes: matchedTopic.durationMinutes || 45,
-                  questions: matchedTopic.questions,
-                };
-              }
-            }
-          } catch (overviewErr) {
-            console.error("Failed to fetch clinical topic questions:", overviewErr);
-          }
-        }
-
-        if (!targetExam && bankIdParam) {
-          const res = await questionBankApi.getQuestionBankById(bankIdParam);
-          if (res?.data) targetExam = res.data;
-        } else if (!targetExam && examIdParam) {
-          const res = await mockExamApi.getMockExamById(examIdParam);
-          if (res?.data) targetExam = res.data;
-        } else if (!targetExam) {
-          const listRes = await mockExamApi.getMockExams();
-          if (listRes?.data?.length > 0) {
-            const matched = listRes.data.find(
-              (e: any) => e.title.toLowerCase() === topicParam.toLowerCase() || e.id === topicParam
-            ) || listRes.data[0];
-
-            if (matched) {
-              const res = await mockExamApi.getMockExamById(matched.id);
-              if (res?.data) targetExam = res.data;
-            }
-          }
-        }
-
-        if (targetExam && targetExam.questions?.length > 0) {
-          const dynamicQ: QuestionItem[] = targetExam.questions.map((q: any, idx: number) => ({
-            id: idx + 1,
-            backendId: q.id,
-            badge: `Q.${idx + 1}`,
-            topic: targetExam.category || "Mock Exam",
-            subTopic: targetExam.title || `Question ${idx + 1}`,
-            vignette: q.questionText,
-            question: q.questionText,
-            options: (q.options || []).map((optText: string, oIdx: number) => ({
-              id: String.fromCharCode(65 + oIdx),
-              label: optText,
-            })),
-            correctOption: String.fromCharCode(65 + (q.correctAnswer ?? 0)),
-            explanation: q.explanation || "No explanation provided for this question.",
-            difficulty: (targetExam.difficultyBadge || "Moderate") as any,
-            frequency: `${targetExam.questions.length} Questions Module`,
-          }));
-
-          setQuestions(dynamicQ);
-          setActiveTopic(targetExam.title);
-
-          try {
-            if (bankIdParam) {
-              const startRes = await questionBankApi.startBankAttempt(targetExam.id);
-              if (startRes?.data?.id) {
-                setAttemptId(startRes.data.id);
-              }
-            } else {
-              const startRes = await mockExamApi.startExam(targetExam.id);
-              if (startRes?.data?.id) {
-                setAttemptId(startRes.data.id);
-              }
-            }
-          } catch (startErr) {
-            console.error("Failed to start/resume exam attempt on backend:", startErr);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load real mock exam questions:", err);
-      } finally {
-        setLoadingExam(false);
-      }
+    // 1. Mock Exam redirection
+    if (mockId || examId || topic.toLowerCase().includes("mock")) {
+      router.replace(`/practice/mock-exam${queryStr ? `?${queryStr}` : ""}`);
+      return;
     }
 
-    loadDynamicExam();
-  }, [examIdParam, bankIdParam, topicIdParam, topicParam]);
-
-  const handleSelectOption = (optionId: string) => {
-    const currentQ = questions[currentIndex];
-    if (!currentQ) return;
-    if (userAnswers[currentQ.id]) return;
-
-    setUserAnswers((prev) => ({
-      ...prev,
-      [currentQ.id]: optionId,
-    }));
-  };
-
-  const toggleBookmark = () => {
-    const currentQ = questions[currentIndex];
-    if (!currentQ) return;
-    setBookmarked((prev) => ({ ...prev, [currentQ.id]: !prev[currentQ.id] }));
-  };
-
-  const toggleFlag = () => {
-    const currentQ = questions[currentIndex];
-    if (!currentQ) return;
-    setFlagged((prev) => ({ ...prev, [currentQ.id]: !prev[currentQ.id] }));
-  };
-
-  const handleFinishTest = async () => {
-    let correctCount = 0;
-    let wrongCount = 0;
-
-    questions.forEach((q) => {
-      const chosenLetter = userAnswers[q.id];
-      if (chosenLetter) {
-        if (chosenLetter === q.correctOption) {
-          correctCount++;
-        } else {
-          wrongCount++;
-        }
-      }
-    });
-
-    const attemptedTotal = correctCount + wrongCount;
-    const accuracyPct = attemptedTotal > 0 ? Math.round((correctCount / attemptedTotal) * 100) : 0;
-    const attemptsPct = questions.length > 0 ? Math.round((attemptedTotal / questions.length) * 100) : 100;
-
-    if (attemptId) {
-      try {
-        const backendAnswers: Record<string, number> = {};
-        questions.forEach((q) => {
-          const chosenLetter = userAnswers[q.id];
-          if (chosenLetter && q.backendId) {
-            const charCodeIndex = chosenLetter.charCodeAt(0) - 65;
-            backendAnswers[q.backendId] = charCodeIndex;
-          }
-        });
-
-        if (bankIdParam) {
-          await questionBankApi.submitBankAttempt(attemptId, {
-            userAnswers: backendAnswers,
-            timeTakenSeconds: timeElapsed,
-          });
-        } else {
-          await mockExamApi.submitExam(attemptId, {
-            userAnswers: backendAnswers,
-            timeTakenSeconds: timeElapsed,
-          });
-        }
-      } catch (submitErr) {
-        console.error("Failed to submit exam attempt:", submitErr);
-      }
+    // 2. Professional Dilemmas redirection
+    if (
+      domainId ||
+      type === "SJT" ||
+      type === "RANKING" ||
+      speciality?.toLowerCase().includes("dilemma") ||
+      topic.toLowerCase().includes("dilemma") ||
+      topic.toLowerCase().includes("professional")
+    ) {
+      router.replace(`/practice/professional-dilemmas${queryStr ? `?${queryStr}` : ""}`);
+      return;
     }
 
-    if (typeof window !== "undefined") {
-      const todayStr = new Date().toISOString().split("T")[0];
-      const userPrefix = `user_${userId}_`;
-      const prevDailyCount = parseInt(
-        localStorage.getItem(`${userPrefix}daily_questions_count_${todayStr}`) ||
-        localStorage.getItem(`daily_questions_count_${todayStr}`) ||
-        "0",
-        10
-      );
-      const newDailyCount = prevDailyCount + (attemptedTotal > 0 ? attemptedTotal : questions.length);
-      localStorage.setItem(`${userPrefix}daily_questions_count_${todayStr}`, newDailyCount.toString());
-      localStorage.setItem(`${userPrefix}last_goal_date`, todayStr);
-
-      const lastAttemptData = {
-        title: topicParam || activeTopic || "Topic Practice",
-        correct: correctCount,
-        wrong: wrongCount,
-        attemptsPct,
-        accuracyPct,
-        totalQ: questions.length,
-        timestamp: Date.now(),
-      };
-      if (topicIdParam) {
-        localStorage.setItem(`${userPrefix}topic_last_attempt_${topicIdParam}`, JSON.stringify(lastAttemptData));
-      }
-      if (topicParam) {
-        localStorage.setItem(`${userPrefix}topic_last_attempt_${topicParam}`, JSON.stringify(lastAttemptData));
-      }
-      if (bankIdParam) {
-        localStorage.setItem(`${userPrefix}bank_last_attempt_${bankIdParam}`, JSON.stringify(lastAttemptData));
-      }
-      localStorage.removeItem(STORAGE_KEY);
+    // 3. Clinical redirection
+    if (topicId || bankId || speciality || (topic && topic !== "Mock Practice Exam")) {
+      router.replace(`/practice/clinical${queryStr ? `?${queryStr}` : ""}`);
+      return;
     }
-    router.push(topicIdParam ? "/dashboard" : bankIdParam ? "/dashboard/question-bank" : "/dashboard/mock-exams");
-  };
+  }, [router, searchParams]);
 
-  const handleNextOrFinish = () => {
-    if (currentIndex >= questions.length - 1) {
-      handleFinishTest();
-    } else {
-      setCurrentIndex((prev) => prev + 1);
-    }
-  };
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl w-full">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            Medical Practice Modules
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            Select Your Practice Mode
+          </h1>
+          <p className="text-slate-500 text-sm mt-2 max-w-xl mx-auto">
+            Choose from 3 specialised practice environments tailored to MSRA preparation.
+          </p>
+        </div>
 
-  if (loadingExam) {
-    return (
-      <div className="min-h-screen bg-[#f4f6f8] flex flex-col text-slate-800">
-        <PracticeHeader
-          activeTopic={activeTopic}
-          totalQuestions={0}
-          answeredCount={0}
-          timeElapsed={0}
-          onFinishTest={() => {}}
-        />
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 w-full flex-1">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6 animate-pulse">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="h-6 bg-slate-200 rounded w-1/3" />
-              <div className="h-4 bg-slate-100 rounded w-24" />
+        {/* 3 Separate Practice Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: Clinical Problem Solving */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Stethoscope className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                Clinical Focus
+              </span>
+              <h2 className="text-lg font-bold text-slate-900 mt-2">
+                Clinical Problem Solving
+              </h2>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                Practice SBA questions with clinical vignettes, immediate feedback, diagnostic rationales, and full question navigator.
+              </p>
             </div>
-            <div className="space-y-4">
-              <div className="h-20 bg-slate-100 rounded-xl" />
-              <div className="h-6 bg-slate-200 rounded w-2/3" />
+            <div className="pt-6 mt-4 border-t border-slate-100">
+              <Link
+                href="/practice/clinical"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              >
+                <span>Launch Clinical Practice</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-            <div className="space-y-3 pt-2">
-              <div className="h-12 bg-slate-100 rounded-xl" />
-              <div className="h-12 bg-slate-100 rounded-xl" />
-              <div className="h-12 bg-slate-100 rounded-xl" />
-              <div className="h-12 bg-slate-100 rounded-xl" />
+          </div>
+
+          {/* Card 2: Professional Dilemmas */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Scale className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                SJT / Dilemmas
+              </span>
+              <h2 className="text-lg font-bold text-slate-900 mt-2">
+                Professional Dilemmas
+              </h2>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                Situational Judgment Test (SJT) with interactive 1-to-5 ranking, ethical integrity scenarios, and GMC guidance consensus.
+              </p>
+            </div>
+            <div className="pt-6 mt-4 border-t border-slate-100">
+              <Link
+                href="/practice/professional-dilemmas"
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              >
+                <span>Launch SJT Practice</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 3: Mock Exam */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <FileText className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-brand-orange bg-orange-50 px-2 py-0.5 rounded-md">
+                Full MSRA Simulation
+              </span>
+              <h2 className="text-lg font-bold text-slate-900 mt-2">
+                Mock Exam
+              </h2>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                Realistic exam condition timed simulation covering both papers with flag for review, section progression, and score report.
+              </p>
+            </div>
+            <div className="pt-6 mt-4 border-t border-slate-100">
+              <Link
+                href="/practice/mock-exam"
+                className="w-full py-2.5 px-4 rounded-xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              >
+                <span>Start Mock Exam</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  if (!loadingExam && questions.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#072438] flex items-center justify-center p-4">
-        <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-700 text-center space-y-4 shadow-xl">
-          <HelpCircle className="w-12 h-12 text-slate-400 mx-auto" />
-          <h3 className="text-xl font-bold text-white">No Questions Available</h3>
-          <p className="text-xs text-slate-400">
-            There are no practice questions published for "{activeTopic}" yet. Configure questions from the Admin Dashboard.
-          </p>
-          <Link
-            href="/dashboard"
-            className="inline-block px-7 py-3 bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs sm:text-sm rounded-full transition-all shadow-md shadow-brand-orange/20 active:scale-95 cursor-pointer"
-          >
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const currentQ = questions[currentIndex] || questions[0];
-  const answeredCount = Object.keys(userAnswers).length;
-
-  return (
-    <div className="min-h-screen bg-[#f4f6f8] flex flex-col text-slate-800">
-      {/* Header Bar */}
-      <PracticeHeader
-        activeTopic={activeTopic}
-        totalQuestions={questions.length}
-        answeredCount={answeredCount}
-        timeElapsed={timeElapsed}
-        onFinishTest={handleFinishTest}
-      />
-
-      {/* Main Content Body */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 w-full flex-1">
-        {currentQ && (
-          <PracticeQuestionCard
-            currentQ={currentQ}
-            currentIndex={currentIndex}
-            totalQuestions={questions.length}
-            userAnswer={userAnswers[currentQ.id]}
-            isBookmarked={Boolean(bookmarked[currentQ.id])}
-            isFlagged={Boolean(flagged[currentQ.id])}
-            onSelectOption={handleSelectOption}
-            onPrevious={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-            onNextOrFinish={handleNextOrFinish}
-            onToggleBookmark={toggleBookmark}
-            onToggleFlag={toggleFlag}
-          />
-        )}
       </div>
     </div>
   );
@@ -388,8 +154,14 @@ function PracticeContent() {
 
 export default function StandalonePracticePageWrapper() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500 font-bold">Loading exam session...</div>}>
-      <PracticeContent />
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      }
+    >
+      <PracticeRouter />
     </Suspense>
   );
 }
