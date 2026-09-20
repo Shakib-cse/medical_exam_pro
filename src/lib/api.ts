@@ -30,13 +30,26 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const data = error.response?.data;
-    const message =
+    let message =
       data?.error?.message || // { error: { message: "..." } }
       data?.message || // { message: "..." }
       (typeof data?.error === "string" ? data.error : null) || // { error: "..." }
       error.message || // Axios error message
       "An unexpected error occurred. Please try again.";
-    
+
+    // Convert technical database / pool / network errors to friendly user messages
+    if (
+      /pool timeout|failed to retrieve a connection|mariadb|mysql|prisma|ETIMEDOUT|ECONNREFUSED|ECONNRESET|database connection|not allowed to connect|access denied/i.test(
+        message
+      )
+    ) {
+      message =
+        "Service is temporarily unavailable due to database connectivity. Please try again shortly.";
+    } else if (/Network Error/i.test(message)) {
+      message =
+        "Unable to reach the server. Please check your internet connection.";
+    }
+
     return Promise.reject(new Error(message));
   }
 );

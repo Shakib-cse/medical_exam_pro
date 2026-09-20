@@ -1,183 +1,178 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, ArrowRight } from "lucide-react";
+import { getSpecialtyStats, formatAverageTime, CPSSpecialtyStats } from "@/lib/practiceSession";
 
 interface SpecialityCardData {
   id: string;
   title: string;
   image: string;
   totalQ: number;
-  correct: number;
-  wrong: number;
-  attemptsPercent: number;
-  accuracyPercent: number;
-  status: "all" | "weakest" | "in_progress";
 }
 
 const specialitiesData: SpecialityCardData[] = [
   {
     id: "cardiovascular",
-    title: "Cardiovascular",
+    title: "Cardiovascular Medicine",
     image: "/images/specialties/cardiovascular.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
-  },
-  {
-    id: "respiratory",
-    title: "Respiratory",
-    image: "/images/specialties/respiratory.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "weakest",
-  },
-  {
-    id: "gastroenterology",
-    title: "Gastroenterology / Nutrition",
-    image: "/images/specialties/gastroenterology.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
-  },
-  {
-    id: "neurology",
-    title: "Neurology / Psychiatry",
-    image: "/images/specialties/neurology.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "weakest",
-  },
-  {
-    id: "renal",
-    title: "Renal / Urology",
-    image: "/images/specialties/renal.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "in_progress",
-  },
-  {
-    id: "endocrinology",
-    title: "Endocrinology / Metabolic",
-    image: "/images/specialties/endocrinology.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
+    totalQ: 322,
   },
   {
     id: "dermatology",
-    title: "Dermatology / ENT / Eyes",
+    title: "Dermatology",
     image: "/images/specialties/dermatology.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "in_progress",
+    totalQ: 268,
   },
   {
-    id: "infectious",
-    title: "Infectious disease / Haematology",
-    image: "/images/specialties/infectious.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
+    id: "endocrinology",
+    title: "Endocrinology & Diabetes",
+    image: "/images/specialties/endocrinology.png",
+    totalQ: 320,
+  },
+  {
+    id: "ent",
+    title: "ENT",
+    image: "/images/specialties/ent.png",
+    totalQ: 208,
+  },
+  {
+    id: "gastroenterology",
+    title: "Gastroenterology & Hepatology",
+    image: "/images/specialties/gastroenterology.png",
+    totalQ: 399,
   },
   {
     id: "immunology",
-    title: "Immunology / Allergies / Genetics",
+    title: "Genetics & Immunology",
     image: "/images/specialties/immunology.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
+    totalQ: 126,
   },
   {
-    id: "musculoskeletal",
-    title: "Musculoskeletal",
-    image: "/images/specialties/musculoskeletal.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "in_progress",
+    id: "haematology",
+    title: "Haematology & Oncology",
+    image: "/images/specialties/haematology.png",
+    totalQ: 310,
+  },
+  {
+    id: "infectious",
+    title: "Infectious Diseases",
+    image: "/images/specialties/infectious.png",
+    totalQ: 147,
+  },
+  {
+    id: "neurology",
+    title: "Neurology",
+    image: "/images/specialties/neurology.png",
+    totalQ: 288,
+  },
+  {
+    id: "ophthalmology",
+    title: "Ophthalmology",
+    image: "/images/specialties/ophthalmology.png",
+    totalQ: 183,
   },
   {
     id: "paediatrics",
     title: "Paediatrics",
     image: "/images/specialties/paediatrics.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
+    totalQ: 405,
   },
   {
     id: "pharmacology",
-    title: "Pharmacology and therapeutics",
+    title: "Pharmacology",
     image: "/images/specialties/pharmacology.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
+    totalQ: 478,
+  },
+  {
+    id: "psychiatry",
+    title: "Psychiatry",
+    image: "/images/specialties/psychiatry.png",
+    totalQ: 221,
+  },
+  {
+    id: "renal",
+    title: "Renal Medicine & Urology",
+    image: "/images/specialties/renal.png",
+    totalQ: 339,
   },
   {
     id: "reproductive",
-    title: "Reproductive",
+    title: "Reproductive Medicine",
     image: "/images/specialties/reproductive.png",
-    totalQ: 500,
-    correct: 120,
-    wrong: 99,
-    attemptsPercent: 20,
-    accuracyPercent: 80,
-    status: "all",
+    totalQ: 591,
+  },
+  {
+    id: "respiratory",
+    title: "Respiratory Medicine",
+    image: "/images/specialties/respiratory.png",
+    totalQ: 448,
+  },
+  {
+    id: "musculoskeletal",
+    title: "Rheumatology & Musculoskeletal Medicine",
+    image: "/images/specialties/musculoskeletal.png",
+    totalQ: 372,
+  },
+  {
+    id: "surgery",
+    title: "Surgery & Orthopaedics",
+    image: "/images/specialties/surgery.png",
+    totalQ: 83,
   },
 ];
 
 export default function ClinicalProblemSolvingPage() {
   const [filter, setFilter] = useState<"all" | "weakest" | "in_progress">("all");
+  const [statsMap, setStatsMap] = useState<Record<string, CPSSpecialtyStats>>({});
+
+  useEffect(() => {
+    function loadAllStats() {
+      const map: Record<string, CPSSpecialtyStats> = {};
+      for (const item of specialitiesData) {
+        const byId = getSpecialtyStats(item.id, item.totalQ);
+        const byTitle = getSpecialtyStats(item.title, item.totalQ);
+        map[item.id] = byTitle.attempted >= byId.attempted ? byTitle : byId;
+      }
+      setStatsMap(map);
+    }
+
+    loadAllStats();
+
+    window.addEventListener("focus", loadAllStats);
+    window.addEventListener("storage", loadAllStats);
+    return () => {
+      window.removeEventListener("focus", loadAllStats);
+      window.removeEventListener("storage", loadAllStats);
+    };
+  }, []);
+
+  const totalQuestions = specialitiesData.reduce((acc, curr) => acc + curr.totalQ, 0); // 5,508
+  let attempted = 0;
+  let correct = 0;
+  let totalTimeSec = 0;
+  for (const s of Object.values(statsMap)) {
+    attempted += s.attempted;
+    correct += s.correct;
+    totalTimeSec += s.totalTimeSeconds;
+  }
+  const currentProgressPercent = totalQuestions > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
+  const overallAccuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+  const avgSec = attempted > 0 ? totalTimeSec / attempted : 0;
+  const averageTime = formatAverageTime(avgSec);
 
   const filteredList = specialitiesData.filter((item) => {
+    const st = statsMap[item.id];
+    const isWeakest = st && st.attempted > 0 && st.accuracy < 60;
+    const isInProgress = st && st.attempted > 0 && st.progressPercent < 100;
+
     if (filter === "all") return true;
-    if (filter === "weakest") return item.status === "weakest";
-    if (filter === "in_progress") return item.status === "in_progress";
+    if (filter === "weakest") return isWeakest;
+    if (filter === "in_progress") return isInProgress;
     return true;
   });
-
-  const attempted = 1820;
-  const totalQuestions = 8502;
-  const currentProgressPercent = Math.round((attempted / totalQuestions) * 100);
-  const overallAccuracy = 72;
-  const averageTime = "1m 14s";
 
   // Radial chart calculations
   const radius = 28;
@@ -374,67 +369,75 @@ export default function ClinicalProblemSolvingPage() {
             <div className="pt-3 pb-0.5 space-y-3 flex-1 flex flex-col justify-between">
               {/* Title & subtle bottom divider */}
               <div className="border-b border-slate-100 pb-2.5">
-                <h3 className="font-bold text-slate-900 text-sm sm:text-[15px] leading-tight min-h-[1.5rem] flex items-center">
+                <h3
+                  className="font-bold text-slate-900 text-sm sm:text-[15px] leading-tight min-h-[1.5rem] flex items-center truncate"
+                  title={item.title}
+                >
                   {item.title}
                 </h3>
               </div>
 
               {/* 5-Column Stats Box */}
-              <div className="grid grid-cols-5 gap-1.5 text-center">
+              <div className="grid grid-cols-5 gap-1 text-center">
                 {/* Total Q. */}
-                <div className="bg-[#f1f5f9]/80 rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[44px]">
-                  <div className="text-[9px] text-slate-400 font-medium leading-tight">
+                <div className="bg-[#f1f3f6] rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px]">
+                  <div className="text-[10px] text-slate-500 font-medium leading-tight">
                     Total Q.
                   </div>
-                  <div className="font-bold text-slate-900 text-xs sm:text-[13px] mt-0.5">
+                  <div className="w-4/5 h-[1px] my-0.5 bg-slate-200/80" />
+                  <div className="font-bold text-slate-900 text-xs sm:text-[13px]">
                     {item.totalQ}
                   </div>
                 </div>
 
                 {/* Correct */}
-                <div className="bg-[#d1fae5] rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[44px]">
-                  <div className="text-[9px] text-[#059669] font-medium leading-tight">
+                <div className="bg-[#cff1e6] rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px]">
+                  <div className="text-[10px] text-[#10b981] font-semibold leading-tight">
                     Correct
                   </div>
-                  <div className="font-bold text-[#059669] text-xs sm:text-[13px] mt-0.5">
-                    {item.correct}
+                  <div className="w-4/5 h-[1px] my-0.5 bg-[#a7f3d0]" />
+                  <div className="font-bold text-[#10b981] text-xs sm:text-[13px]">
+                    {statsMap[item.id]?.correct || 0}
                   </div>
                 </div>
 
                 {/* Wrong */}
-                <div className="bg-[#fee2e2] rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[44px]">
-                  <div className="text-[9px] text-[#dc2626] font-medium leading-tight">
+                <div className="bg-[#fcdada] rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px]">
+                  <div className="text-[10px] text-[#ef4444] font-semibold leading-tight">
                     Wrong
                   </div>
-                  <div className="font-bold text-[#dc2626] text-xs sm:text-[13px] mt-0.5">
-                    {item.wrong}
+                  <div className="w-4/5 h-[1px] my-0.5 bg-[#fca5a5]" />
+                  <div className="font-bold text-[#ef4444] text-xs sm:text-[13px]">
+                    {Math.max(0, (statsMap[item.id]?.attempted || 0) - (statsMap[item.id]?.correct || 0))}
                   </div>
                 </div>
 
                 {/* Attempts */}
-                <div className="bg-[#f1f5f9]/80 rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[44px]">
-                  <div className="text-[9px] text-slate-400 font-medium leading-tight">
+                <div className="bg-[#f1f3f6] rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px]">
+                  <div className="text-[10px] text-slate-500 font-medium leading-tight">
                     Attempts
                   </div>
-                  <div className="font-bold text-slate-900 text-xs sm:text-[13px] mt-0.5">
-                    {item.attemptsPercent}%
+                  <div className="w-4/5 h-[1px] my-0.5 bg-slate-200/80" />
+                  <div className="font-bold text-slate-900 text-xs sm:text-[13px]">
+                    {statsMap[item.id]?.progressPercent || 0}%
                   </div>
                 </div>
 
                 {/* Acc */}
-                <div className="bg-[#f1f5f9]/80 rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[44px]">
-                  <div className="text-[9px] text-slate-400 font-medium leading-tight">
+                <div className="bg-[#f1f3f6] rounded-lg py-1.5 px-0.5 flex flex-col items-center justify-center min-h-[46px]">
+                  <div className="text-[10px] text-slate-500 font-medium leading-tight">
                     Acc
                   </div>
-                  <div className="font-bold text-slate-900 text-xs sm:text-[13px] mt-0.5">
-                    {item.accuracyPercent}%
+                  <div className="w-4/5 h-[1px] my-0.5 bg-slate-200/80" />
+                  <div className="font-bold text-slate-900 text-xs sm:text-[13px]">
+                    {statsMap[item.id]?.accuracy || 0}%
                   </div>
                 </div>
               </div>
 
               {/* Action Button */}
               <div className="pt-1">
-                <div className="w-full py-2.5 rounded-xl bg-brand-orange group-hover:bg-brand-orange/90 active:scale-[0.99] text-white text-xs sm:text-[13px] font-bold text-center transition-all shadow-xs shadow-brand-orange/20 flex items-center justify-center gap-1.5">
+                <div className="w-full py-2.5 rounded-xl bg-[#f97316] group-hover:bg-[#ea580c] active:scale-[0.99] text-white text-xs sm:text-[13px] font-bold text-center transition-all shadow-xs shadow-orange-500/10 flex items-center justify-center gap-1.5">
                   <span>Start Practicing</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </div>

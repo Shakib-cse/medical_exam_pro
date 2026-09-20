@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import { ReduxProvider } from "@/redux/provider";
+import Analytics from "@/components/Analytics";
 
 export default function RootLayout({
   children,
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} font-sans antialiased bg-foreground/5 text-foreground`}
       >
+        <Analytics />
         <ReduxProvider>{children}</ReduxProvider>
       </body>
     </html>

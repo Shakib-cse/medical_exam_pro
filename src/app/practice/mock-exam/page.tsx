@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Clock, ChevronLeft, ChevronRight, Flag, AlertTriangle, CheckCircle2, Trophy, HelpCircle } from "lucide-react";
 import { mockExamApi } from "@/services/mockExamApi";
+import { ExamResultView } from "../_components/ExamResultView";
+import { formatAverageTime } from "@/lib/practiceSession";
 
 interface MockQuestion {
   id: number;
@@ -216,6 +218,31 @@ function MockExamPracticeContent() {
   ).length;
 
   const scorePercent = Math.round((correctCount / questions.length) * 100);
+
+  if (examSubmitted) {
+    const elapsedSec = Math.max(0, 120 * 60 - timeRemaining);
+    const avgSec = answeredCount > 0 ? Math.round(elapsedSec / answeredCount) : 0;
+    const averageTimeString = formatAverageTime(avgSec);
+
+    return (
+      <ExamResultView
+        specialtyOrTitle="MSRA Full Mock Exam"
+        overallAccuracy={scorePercent}
+        questionsAttempted={answeredCount}
+        averageTime={averageTimeString}
+        returnUrl="/dashboard/mock-exams"
+        onRetake={() => {
+          setUserAnswers({});
+          setFlagged({});
+          setTimeRemaining(120 * 60);
+          setCurrentIndex(0);
+          setExamSubmitted(false);
+          setShowSubmitModal(false);
+        }}
+        examType="Mock"
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#edf0f4] text-slate-800 flex flex-col font-sans">

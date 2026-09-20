@@ -7,6 +7,9 @@ export interface QuestionBankQuestion {
   correctAnswer: number;
   explanation?: string;
   subTopic?: string;
+  questionType?: "SBA" | "EMQ";
+  themeNumber?: number | null;
+  cases?: any;
 }
 
 export interface QuestionBankItemData {
@@ -20,10 +23,17 @@ export interface QuestionBankItemData {
   difficultyType: "moderate" | "advanced" | "clinical" | "standard";
   durationMinutes?: number;
   questionCount: number;
+  subTopics?: string[];
   questions?: QuestionBankQuestion[];
   avgAcc: string;
   isUnattempted: boolean;
   lastAttempted?: string;
+  stats?: {
+    attempted: number;
+    correct: number;
+    accuracy: number;
+    averageTimeSeconds: number;
+  };
 }
 
 export interface ApiResponse<T> {
@@ -40,6 +50,14 @@ export const questionBankApi = {
 
   getQuestionBankById: async (id: string) => {
     const res = await api.get<ApiResponse<QuestionBankItemData>>(`/question-bank/${id}`);
+    return res.data;
+  },
+
+  getQuestionBankBySpecialty: async (specialty: string, summary: boolean = true) => {
+    const query = summary ? "?summary=true" : "?summary=false";
+    const res = await api.get<ApiResponse<QuestionBankItemData>>(
+      `/question-bank/specialty/${encodeURIComponent(specialty)}${query}`
+    );
     return res.data;
   },
 

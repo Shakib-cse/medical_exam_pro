@@ -131,22 +131,11 @@ export function PracticeQuestionCard({
 
       {/* Feedback & Explanation Card */}
       {isAnswered && (
-        <div
-          className={`rounded-2xl p-6 border shadow-2xs space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${isCorrect
-              ? "bg-[#f0fdf4] border-emerald-300 text-emerald-950"
-              : "bg-[#fef2f2] border-red-300 text-red-950"
-            }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {isCorrect ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            ) : (
-              <XCircle className="w-5 h-5 text-red-600 shrink-0" />
-            )}
-            <h4 className="font-extrabold text-sm sm:text-base">
-              {isCorrect
-                ? `Correct! Option ${currentQ.correctOption} is right.`
-                : `Incorrect. Correct Answer: Option ${currentQ.correctOption}`}
+        <div className="rounded-2xl p-6 border border-slate-200/90 bg-[#F8FAFC] shadow-2xs space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center gap-2 text-emerald-600">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <h4 className="font-extrabold text-sm sm:text-base text-emerald-700">
+              Correct Answer: Option {currentQ.correctOption}
             </h4>
           </div>
 

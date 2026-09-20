@@ -8,7 +8,7 @@ import { useDispatch } from "react-redux"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react"
+import { Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -114,8 +114,9 @@ function SignInContent() {
 
       {/* Error Notification */}
       {errorMessage && (
-        <div className="w-full mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm font-medium text-center">
-          {errorMessage}
+        <div className="w-full mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200/80 text-red-700 text-xs sm:text-sm font-medium flex items-start sm:items-center gap-2.5 shadow-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 text-red-500 mt-0.5 sm:mt-0" />
+          <span className="flex-1 text-left leading-relaxed">{errorMessage}</span>
         </div>
       )}
 

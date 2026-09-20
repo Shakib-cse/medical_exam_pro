@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,302 +9,307 @@ import {
   Clock,
   ArrowLeft,
   Info,
+  Loader2,
 } from "lucide-react";
+import { questionBankApi, QuestionBankItemData } from "@/services/questionBankApi";
+import {
+  getSavedCPSSession,
+  getSpecialtyStats,
+  CPSSavedSession,
+  CPSSpecialtyStats,
+  formatAverageTime,
+} from "@/lib/practiceSession";
 
-interface SpecialtyConfig {
-  id: string;
+interface SpecialtyMeta {
   title: string;
   subtitle: string;
-  attempted: number;
-  totalQ: number;
-  accuracy: number;
-  averageTime: string;
-  topics: string[];
 }
 
-const specialtiesMap: Record<string, SpecialtyConfig> = {
+const SPECIALTY_META: Record<string, SpecialtyMeta> = {
   cardiovascular: {
-    id: "cardiovascular",
     title: "Cardiovascular Medicine",
-    subtitle: "Practice cardiovascular CPS questions.",
-    attempted: 132,
-    totalQ: 650,
-    accuracy: 66,
-    averageTime: "1m 14s",
-    topics: [
-      "Coronary Artery Disease",
-      "Heart Failure",
-      "Myocardial Infarction",
-      "Atrial Fibrillation",
-      "Hypertension Management",
-      "Heart Valve Disorders",
-      "Peripheral Artery Disease",
-      "Congestive Heart Failure",
-      "Cardiac Rehabilitation",
-    ],
-  },
-  respiratory: {
-    id: "respiratory",
-    title: "Respiratory Medicine",
-    subtitle: "Practice respiratory CPS questions.",
-    attempted: 110,
-    totalQ: 550,
-    accuracy: 70,
-    averageTime: "1m 10s",
-    topics: [
-      "Asthma & COPD",
-      "Pneumonia & Lower RTI",
-      "Pulmonary Embolism",
-      "Pleural Effusion & Pneumothorax",
-      "Interstitial Lung Disease",
-      "Bronchiectasis & Cystic Fibrosis",
-      "Sleep Apnoea",
-      "Occupational Lung Disease",
-    ],
-  },
-  gastroenterology: {
-    id: "gastroenterology",
-    title: "Gastroenterology & Nutrition",
-    subtitle: "Practice gastroenterology & nutrition CPS questions.",
-    attempted: 145,
-    totalQ: 600,
-    accuracy: 74,
-    averageTime: "1m 18s",
-    topics: [
-      "Gastro-oesophageal Reflux Disease (GORD)",
-      "Inflammatory Bowel Disease (Crohn's & UC)",
-      "Peptic Ulcer Disease",
-      "Irritable Bowel Syndrome (IBS)",
-      "Coeliac Disease & Malabsorption",
-      "Liver Cirrhosis & Hepatitis",
-      "Pancreatitis & Gallbladder Disease",
-      "Nutritional Deficiencies & Obesity",
-    ],
-  },
-  neurology: {
-    id: "neurology",
-    title: "Neurology & Psychiatry",
-    subtitle: "Practice neurology & psychiatry CPS questions.",
-    attempted: 98,
-    totalQ: 520,
-    accuracy: 64,
-    averageTime: "1m 22s",
-    topics: [
-      "Stroke & TIA",
-      "Epilepsy & Seizure Disorders",
-      "Migraine & Headache Disorders",
-      "Parkinson's & Movement Disorders",
-      "Multiple Sclerosis",
-      "Dementia & Cognitive Impairment",
-      "Depressive & Anxiety Disorders",
-      "Psychosis & Bipolar Disorder",
-    ],
-  },
-  renal: {
-    id: "renal",
-    title: "Renal & Urology Medicine",
-    subtitle: "Practice renal & urology CPS questions.",
-    attempted: 85,
-    totalQ: 480,
-    accuracy: 68,
-    averageTime: "1m 15s",
-    topics: [
-      "Acute Kidney Injury (AKI)",
-      "Chronic Kidney Disease (CKD)",
-      "Glomerulonephritis & Nephrotic Syndrome",
-      "Urinary Tract Infections (UTI)",
-      "Nephrolithiasis (Renal Stones)",
-      "Benign Prostatic Hyperplasia (BPH)",
-      "Haematuria Investigation",
-      "Electrolyte & Acid-Base Disorders",
-    ],
-  },
-  endocrinology: {
-    id: "endocrinology",
-    title: "Endocrinology & Metabolic",
-    subtitle: "Practice endocrinology & metabolic CPS questions.",
-    attempted: 120,
-    totalQ: 500,
-    accuracy: 72,
-    averageTime: "1m 12s",
-    topics: [
-      "Type 1 & Type 2 Diabetes Mellitus",
-      "Diabetic Ketoacidosis (DKA) & HHS",
-      "Hypothyroidism & Hyperthyroidism",
-      "Adrenal Insufficiency & Cushing's",
-      "Pituitary Disorders & Hyperprolactinaemia",
-      "Calcium & Parathyroid Disorders",
-      "Polycystic Ovary Syndrome (PCOS)",
-      "Dyslipidaemia & Metabolic Syndrome",
-    ],
+    subtitle: "Comprehensive question bank covering coronary artery disease, heart failure, arrhythmias, valvular disorders, and cardiology emergencies.",
   },
   dermatology: {
-    id: "dermatology",
-    title: "Dermatology, ENT & Eyes",
-    subtitle: "Practice dermatology, ENT & ophthalmology CPS questions.",
-    attempted: 95,
-    totalQ: 490,
-    accuracy: 75,
-    averageTime: "1m 08s",
-    topics: [
-      "Eczema & Dermatitis",
-      "Psoriasis & Papulosquamous Disorders",
-      "Skin Cancers & Lesions",
-      "Otitis Media & Externae",
-      "Sinusitis & Allergic Rhinitis",
-      "Hearing Loss & Vertigo (Ménière's)",
-      "Red Eye & Conjunctivitis",
-      "Glaucoma & Retinal Disorders",
-    ],
+    title: "Dermatology",
+    subtitle: "Comprehensive question bank covering inflammatory dermatoses, cutaneous infections, skin malignancies, and dermatological emergencies.",
   },
-  infectious: {
-    id: "infectious",
-    title: "Infectious Disease & Haematology",
-    subtitle: "Practice infectious disease & haematology CPS questions.",
-    attempted: 140,
-    totalQ: 580,
-    accuracy: 69,
-    averageTime: "1m 16s",
-    topics: [
-      "Sepsis & Septic Shock",
-      "HIV/AIDS & Opportunistic Infections",
-      "Tuberculosis & Mycobacterial Disease",
-      "Vector-Borne & Travel Infections",
-      "Iron Deficiency & Megaloblastic Anaemia",
-      "Haemoglobinopathies & Thalassaemia",
-      "Leukaemias & Lymphomas",
-      "Coagulation Disorders & DVT",
-    ],
+  ent: {
+    title: "ENT",
+    subtitle: "Comprehensive question bank covering otological, rhinological, head & neck, and ENT emergency management.",
+  },
+  endocrinology: {
+    title: "Endocrinology & Diabetes",
+    subtitle: "Comprehensive question bank covering diabetes management, thyroid and parathyroid disorders, adrenal conditions, and pituitary disease.",
+  },
+  gastroenterology: {
+    title: "Gastroenterology & Hepatology",
+    subtitle: "Comprehensive question bank covering luminal gastroenterology, chronic liver disease, pancreaticobiliary pathology, and acute GI emergencies.",
   },
   immunology: {
-    id: "immunology",
-    title: "Immunology, Allergies & Genetics",
-    subtitle: "Practice immunology, allergies & genetics CPS questions.",
-    attempted: 80,
-    totalQ: 450,
-    accuracy: 67,
-    averageTime: "1m 20s",
-    topics: [
-      "Anaphylaxis & Drug Allergies",
-      "Systemic Lupus Erythematosus (SLE)",
-      "Rheumatoid Arthritis",
-      "Primary Immunodeficiency Disorders",
-      "Vasculitis & Connective Tissue Diseases",
-      "Inherited Single-Gene Disorders",
-      "Chromosomal Abnormalities",
-      "Autoimmune Blistering Diseases",
-    ],
+    title: "Genetics & Immunology",
+    subtitle: "Comprehensive question bank covering single-gene disorders, chromosomal abnormalities, immunodeficiency, and allergy.",
   },
-  musculoskeletal: {
-    id: "musculoskeletal",
-    title: "Musculoskeletal Medicine",
-    subtitle: "Practice musculoskeletal CPS questions.",
-    attempted: 115,
-    totalQ: 520,
-    accuracy: 71,
-    averageTime: "1m 13s",
-    topics: [
-      "Osteoarthritis & Degenerative Joint Disease",
-      "Osteoporosis & Fragility Fractures",
-      "Gout & Pseudogout",
-      "Septic Arthritis & Osteomyelitis",
-      "Back Pain & Sciatica",
-      "Soft Tissue Injuries & Tendinopathies",
-      "Polymyalgia Rheumatica & Giant Cell Arteritis",
-      "Fibromyalgia & Chronic Pain",
-    ],
+  haematology: {
+    title: "Haematology & Oncology",
+    subtitle: "Comprehensive question bank covering anaemias, haematological malignancies, coagulopathies, and oncological emergencies.",
+  },
+  infectious: {
+    title: "Infectious Diseases",
+    subtitle: "Comprehensive question bank covering bacterial, viral, fungal, and tropical infections, sepsis, and antimicrobial stewardship.",
+  },
+  neurology: {
+    title: "Neurology",
+    subtitle: "Comprehensive question bank covering stroke, headache, epilepsy, movement disorders, demyelinating disease, and neuromuscular conditions.",
+  },
+  ophthalmology: {
+    title: "Ophthalmology",
+    subtitle: "Comprehensive question bank covering acute eye conditions, glaucoma, retinal pathology, neuro-ophthalmology, and ocular trauma.",
   },
   paediatrics: {
-    id: "paediatrics",
     title: "Paediatrics",
-    subtitle: "Practice paediatrics CPS questions.",
-    attempted: 150,
-    totalQ: 620,
-    accuracy: 76,
-    averageTime: "1m 09s",
-    topics: [
-      "Paediatric Respiratory Distress (Croup, Bronchiolitis)",
-      "Febrile Child & Sepsis in Neonates",
-      "Paediatric Gastroenteritis & Dehydration",
-      "Growth & Developmental Milestones",
-      "Childhood Immunisation Schedules",
-      "Paediatric Exanthems & Rashes",
-      "Congenital Heart Disease",
-      "Non-Accidental Injury & Safeguarding",
-    ],
+    subtitle: "Comprehensive question bank covering neonatology, developmental assessment, paediatric infections, respiratory emergencies, and safeguarding.",
   },
   pharmacology: {
-    id: "pharmacology",
-    title: "Pharmacology & Therapeutics",
-    subtitle: "Practice pharmacology and therapeutics CPS questions.",
-    attempted: 160,
-    totalQ: 640,
-    accuracy: 73,
-    averageTime: "1m 11s",
-    topics: [
-      "Antimicrobial Stewardship & Prescribing",
-      "Cardiovascular Drugs & Antihypertensives",
-      "Analgesics & Opiate Prescribing",
-      "Anticoagulation & Reversal Agents",
-      "Adverse Drug Reactions & Interactions",
-      "Therapeutic Drug Monitoring (TDM)",
-      "Toxicology & Overdose Management",
-      "Renal & Hepatic Dosing Adjustments",
-    ],
+    title: "Pharmacology",
+    subtitle: "Comprehensive question bank covering prescribing safety, therapeutic drug monitoring, adverse drug reactions, and toxicology.",
+  },
+  psychiatry: {
+    title: "Psychiatry",
+    subtitle: "Comprehensive question bank covering mood disorders, psychosis, anxiety, substance misuse, eating disorders, and psychiatric emergencies.",
+  },
+  renal: {
+    title: "Renal Medicine & Urology",
+    subtitle: "Comprehensive question bank covering acute and chronic kidney disease, electrolyte disturbances, glomerular disease, and urology.",
   },
   reproductive: {
-    id: "reproductive",
-    title: "Reproductive & Sexual Health",
-    subtitle: "Practice reproductive medicine CPS questions.",
-    attempted: 125,
-    totalQ: 530,
-    accuracy: 70,
-    averageTime: "1m 14s",
-    topics: [
-      "Antenatal Care & Common Pregnancy Complications",
-      "Pre-eclampsia & Gestational Hypertension",
-      "Obstetric Emergencies (APH, PPH, Shoulder Dystocia)",
-      "Contraceptive Counselling & Emergency Contraception",
-      "Menstrual Disorders & Abnormal Uterine Bleeding",
-      "Infertility Investigation",
-      "Menopause & HRT",
-      "Sexually Transmitted Infections (STIs)",
-    ],
+    title: "Reproductive Medicine",
+    subtitle: "Comprehensive question bank covering antenatal and postnatal care, obstetric emergencies, gynaecology, and sexual health.",
+  },
+  respiratory: {
+    title: "Respiratory Medicine",
+    subtitle: "Comprehensive question bank covering airways disease, pleural disease, lung cancer, interstitial disorders, and respiratory failure.",
+  },
+  musculoskeletal: {
+    title: "Rheumatology & Musculoskeletal Medicine",
+    subtitle: "Comprehensive question bank covering inflammatory arthritides, connective tissue disease, osteoporosis, and soft tissue disorders.",
+  },
+  surgery: {
+    title: "Surgery & Orthopaedics",
+    subtitle: "Comprehensive question bank covering acute abdomen, fractures, vascular and perioperative management, and surgical emergencies.",
   },
 };
+
+// Module-level in-memory cache across route navigations
+const specialtyClientCache = new Map<string, QuestionBankItemData>();
+
+function getInitialSpecialtyData(slug: string): QuestionBankItemData | null {
+  if (specialtyClientCache.has(slug)) {
+    return specialtyClientCache.get(slug)!;
+  }
+  if (typeof window !== "undefined") {
+    try {
+      const stored = sessionStorage.getItem(`cps_specialty_${slug}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        specialtyClientCache.set(slug, parsed);
+        return parsed;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+function setCachedSpecialtyData(slug: string, data: QuestionBankItemData) {
+  specialtyClientCache.set(slug, data);
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(`cps_specialty_${slug}`, JSON.stringify(data));
+    } catch {}
+  }
+}
 
 export default function SpecialtyPracticeSettingsPage() {
   const router = useRouter();
   const params = useParams();
   const rawId = typeof params?.specialityId === "string" ? params.specialityId.toLowerCase() : "cardiovascular";
-  const specialty = specialtiesMap[rawId] || specialtiesMap.cardiovascular;
+  const defaultMeta = SPECIALTY_META[rawId] || {
+    title: rawId.charAt(0).toUpperCase() + rawId.slice(1).replace(/-/g, " "),
+    subtitle: "Practice clinical problem solving questions from the question bank.",
+  };
+
+  const initialData = getInitialSpecialtyData(rawId);
+
+  // Backend dynamic question bank state
+  const [dynamicBank, setDynamicBank] = useState<QuestionBankItemData | null>(initialData);
+  const [loadingBank, setLoadingBank] = useState<boolean>(!initialData);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Practice settings state
   const [timerEnabled, setTimerEnabled] = useState(true);
   const [questionType, setQuestionType] = useState<"SBA" | "EMQ" | "Both">("SBA");
-  const [topicMode, setTopicMode] = useState<"all" | "choose">("all");
-  const [selectedTopics, setSelectedTopics] = useState<string[]>(specialty.topics);
+  const [topicMode, setTopicMode] = useState<"all" | "choose">("choose");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+
+  // Saved in-progress session state for resuming
+  const [savedSession, setSavedSession] = useState<CPSSavedSession | null>(null);
+
+  // Pure dynamic database values - zero dummy data
+  const availableTopics = dynamicBank?.subTopics || [];
+  const currentTitle = dynamicBank?.title || defaultMeta.title;
+  const currentSubtitle = dynamicBank?.description || defaultMeta.subtitle;
+  const currentTotalQ = dynamicBank?.questionCount || 0;
+
+  // Fetch dynamic question bank and subtopics from database whenever rawId changes
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchSpecialtyBank() {
+      try {
+        const cached = getInitialSpecialtyData(rawId);
+        if (cached && isMounted) {
+          setDynamicBank(cached);
+          setLoadingBank(false);
+        } else if (!cached && isMounted) {
+          setLoadingBank(true);
+        }
+        setLoadError(null);
+        const res = await questionBankApi.getQuestionBankBySpecialty(rawId, true);
+        if (isMounted && res?.data) {
+          setDynamicBank(res.data);
+          setCachedSpecialtyData(rawId, res.data);
+        }
+      } catch (err: any) {
+        console.error("Failed to load question bank:", err);
+        if (isMounted && !dynamicBank) {
+          setLoadError(err?.message || "Failed to load question bank");
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingBank(false);
+        }
+      }
+    }
+
+    fetchSpecialtyBank();
+    return () => {
+      isMounted = false;
+    };
+  }, [rawId]);
+
+  // Check for unfinished session on mount and when rawId/currentTitle changes
+  useEffect(() => {
+    const session = getSavedCPSSession(rawId) || getSavedCPSSession(currentTitle);
+    if (session && !session.isCompleted && session.totalQuestions > 0) {
+      setSavedSession(session);
+    } else {
+      setSavedSession(null);
+    }
+  }, [rawId, currentTitle]);
+
+  const hasUnfinishedSession = Boolean(
+    savedSession && !savedSession.isCompleted && savedSession.totalQuestions > 0
+  );
+
+  // Dynamic statistics state derived from real user sessions & database bank stats
+  const [specialtyStats, setSpecialtyStats] = useState<CPSSpecialtyStats>({
+    attempted: 0,
+    correct: 0,
+    accuracy: 0,
+    totalTimeSeconds: 0,
+    averageTime: "0s",
+    progressPercent: 0,
+  });
+
+  // Calculate and synchronize dynamic stats whenever rawId, currentTitle, currentTotalQ, savedSession, or dynamicBank changes
+  useEffect(() => {
+    if (!dynamicBank) return;
+
+    // 1. Get client-side saved/live session stats (by slug or title)
+    const statsBySlug = getSpecialtyStats(rawId, currentTotalQ);
+    const statsByTitle = getSpecialtyStats(currentTitle, currentTotalQ);
+    let chosen = statsBySlug.attempted >= statsByTitle.attempted ? statsBySlug : statsByTitle;
+
+    // 2. Check if backend database attempts have more data
+    const backendStats = dynamicBank?.stats;
+    if (backendStats && backendStats.attempted > chosen.attempted) {
+      chosen = {
+        attempted: backendStats.attempted,
+        correct: backendStats.correct,
+        accuracy: backendStats.accuracy,
+        totalTimeSeconds: backendStats.averageTimeSeconds * backendStats.attempted,
+        averageTime: formatAverageTime(backendStats.averageTimeSeconds),
+        progressPercent:
+          currentTotalQ > 0
+            ? Math.min(100, Math.round((backendStats.attempted / currentTotalQ) * 100))
+            : 0,
+      };
+    }
+
+    setSpecialtyStats(chosen);
+  }, [rawId, currentTitle, currentTotalQ, savedSession, dynamicBank]);
+
+  const attemptedCount = specialtyStats.attempted;
+  const accuracyPercent = specialtyStats.accuracy;
+  const averageTimeString = specialtyStats.averageTime;
+  const progressPercent = specialtyStats.progressPercent;
 
   const toggleTopic = (topic: string) => {
+    let next: string[];
     if (selectedTopics.includes(topic)) {
-      if (selectedTopics.length > 1) {
-        setSelectedTopics(selectedTopics.filter((t) => t !== topic));
-      }
+      next = selectedTopics.filter((t) => t !== topic);
     } else {
-      setSelectedTopics([...selectedTopics, topic]);
+      next = [...selectedTopics, topic];
+    }
+    setSelectedTopics(next);
+
+    // If all options are selected, automatically switch to "all"
+    // If any option is unselected, go to "choose"
+    if (next.length === availableTopics.length) {
+      setTopicMode("all");
+    } else {
+      setTopicMode("choose");
     }
   };
 
   const handleSelectAllTopics = () => {
     setTopicMode("all");
-    setSelectedTopics(specialty.topics);
+    setSelectedTopics(availableTopics);
   };
 
   const handleChooseTopics = () => {
     setTopicMode("choose");
   };
 
-  const progressPercent = Math.round((specialty.attempted / specialty.totalQ) * 100);
+  // If loading failed without any cached/fallback data
+  if (loadError && !dynamicBank) {
+    return (
+      <div className="space-y-6 sm:space-y-7 pb-8">
+        <div className="space-y-1">
+          <Link
+            href="/dashboard/clinical-problem-solving"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5E718D] hover:text-[#0F172A] transition-colors mb-1 cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Clinical Problem Solving</span>
+          </Link>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
+            {currentTitle}
+          </h1>
+        </div>
+        <div className="bg-white rounded-2xl p-10 border border-slate-200/80 shadow-2xs text-center space-y-3">
+          <p className="text-sm font-semibold text-red-600">
+            {loadError}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 text-xs font-bold bg-[#1D82EB] text-white rounded-xl hover:bg-blue-600 transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 sm:space-y-7 pb-8">
@@ -318,10 +323,10 @@ export default function SpecialtyPracticeSettingsPage() {
           <span>Back to Clinical Problem Solving</span>
         </Link>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-          {specialty.title}
+          {currentTitle}
         </h1>
-        <p className="text-slate-500 text-xs sm:text-sm font-medium">
-          {specialty.subtitle}
+        <p className="text-slate-500 text-xs sm:text-sm font-medium line-clamp-2">
+          {currentSubtitle}
         </p>
       </div>
 
@@ -333,10 +338,10 @@ export default function SpecialtyPracticeSettingsPage() {
             <p className="text-sm font-medium text-[#5E718D]">Questions Attempted</p>
             <div className="flex items-baseline gap-1.5">
               <span className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-                {specialty.attempted.toLocaleString()}
+                {attemptedCount.toLocaleString()}
               </span>
               <span className="text-sm font-bold text-slate-400">
-                / {specialty.totalQ.toLocaleString()}
+                / {currentTotalQ.toLocaleString()}
               </span>
             </div>
           </div>
@@ -360,7 +365,7 @@ export default function SpecialtyPracticeSettingsPage() {
           <div className="space-y-2">
             <p className="text-sm font-medium text-[#5E718D]">Overall Accuracy</p>
             <div className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-              {specialty.accuracy}%
+              {accuracyPercent}%
             </div>
           </div>
 
@@ -383,7 +388,7 @@ export default function SpecialtyPracticeSettingsPage() {
                 stroke="#1D82EB"
                 strokeWidth="6.5"
                 strokeDasharray={2 * Math.PI * 33}
-                strokeDashoffset={(2 * Math.PI * 33) * (1 - specialty.accuracy / 100)}
+                strokeDashoffset={(2 * Math.PI * 33) * (1 - accuracyPercent / 100)}
                 strokeLinecap="butt"
                 fill="none"
                 className="transition-all duration-700 ease-out"
@@ -391,7 +396,7 @@ export default function SpecialtyPracticeSettingsPage() {
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-[11px] sm:text-xs font-bold text-[#0F172A]">
-                {specialty.accuracy}%
+                {accuracyPercent}%
               </span>
             </div>
           </div>
@@ -402,7 +407,7 @@ export default function SpecialtyPracticeSettingsPage() {
           <div className="space-y-2">
             <p className="text-sm font-medium text-[#5E718D]">Average Time/ Question</p>
             <div className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-              {specialty.averageTime}
+              {averageTimeString}
             </div>
           </div>
 
@@ -501,7 +506,12 @@ export default function SpecialtyPracticeSettingsPage() {
 
           {/* Row 3: Topics Filter Header */}
           <div className="flex items-center justify-between py-1">
-            <span className="text-sm font-medium text-slate-700">Topics</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-700">Topics</span>
+              <span className="text-xs font-semibold text-slate-400">
+                ({availableTopics.length} available)
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -530,33 +540,57 @@ export default function SpecialtyPracticeSettingsPage() {
 
           {/* Selectable Topics Checkbox List */}
           <div className="space-y-3 pt-2">
-            {specialty.topics.map((topic) => {
-              const isChecked = selectedTopics.includes(topic);
-              return (
-                <label
-                  key={topic}
-                  onClick={() => toggleTopic(topic)}
-                  className="flex items-center gap-3 cursor-pointer select-none group"
-                >
-                  <div
-                    className={`w-4 h-4 rounded-[4px] flex items-center justify-center transition-all ${
-                      isChecked
-                        ? "bg-[#1D82EB] text-white"
-                        : "border border-slate-300 bg-white group-hover:border-slate-400"
-                    }`}
-                  >
-                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+            {loadingBank && availableTopics.length === 0 ? (
+              <div className="space-y-3 py-1 animate-pulse">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-[4px] bg-slate-200 shrink-0" />
+                    <div
+                      className="h-3.5 bg-slate-100 rounded-md"
+                      style={{ width: `${50 + (i % 4) * 12}%` }}
+                    />
                   </div>
-                  <span
-                    className={`text-xs sm:text-[13px] font-medium transition-colors ${
-                      isChecked ? "text-slate-900" : "text-slate-500 group-hover:text-slate-700"
-                    }`}
+                ))}
+              </div>
+            ) : availableTopics.length === 0 ? (
+              <p className="text-xs text-slate-400 py-2">No subtopics found for this specialty.</p>
+            ) : (
+              availableTopics.map((topic) => {
+                const isChecked = selectedTopics.includes(topic);
+                return (
+                  <div
+                    key={topic}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleTopic(topic)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleTopic(topic);
+                      }
+                    }}
+                    className="flex items-center gap-3 cursor-pointer select-none group"
                   >
-                    {topic}
-                  </span>
-                </label>
-              );
-            })}
+                    <div
+                      className={`w-4 h-4 rounded-[4px] flex items-center justify-center transition-all ${
+                        isChecked
+                          ? "bg-[#1D82EB] text-white"
+                          : "border border-slate-300 bg-white group-hover:border-slate-400"
+                      }`}
+                    >
+                      {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                    <span
+                      className={`text-xs sm:text-[13px] font-medium transition-colors ${
+                        isChecked ? "text-slate-900" : "text-slate-500 group-hover:text-slate-700"
+                      }`}
+                    >
+                      {topic}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -565,35 +599,64 @@ export default function SpecialtyPracticeSettingsPage() {
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-[#0F172A]">Session</h2>
 
-            {/* Previous Session Found Notice */}
-            <div className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-4 sm:p-5 space-y-2">
-              <div className="flex items-center gap-2 text-[#059669]">
-                <HelpCircle className="w-4 h-4 shrink-0" />
-                <span className="text-xs sm:text-[13px] font-bold">
-                  Previous session found
-                </span>
+            {/* Previous Session Found Notice or Active Bank Info */}
+            {hasUnfinishedSession && savedSession ? (
+              <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-xl p-4 sm:p-5 space-y-2 animate-in fade-in">
+                <div className="flex items-center gap-2 text-[#1D82EB]">
+                  <Clock className="w-4 h-4 shrink-0" />
+                  <span className="text-xs sm:text-[13px] font-bold">
+                    Previous Session In Progress
+                  </span>
+                </div>
+                <p className="text-xs sm:text-[13px] font-bold text-slate-900 leading-snug">
+                  Question {savedSession.currentIndex + 1} of {savedSession.totalQuestions} · {savedSession.questionType}
+                </p>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  You stopped at question {savedSession.currentIndex + 1}. Click Resume Session to continue where you left off.
+                </p>
               </div>
-              <p className="text-xs sm:text-[13px] font-bold text-slate-900 leading-snug">
-                EMQ · SBA · All Topics
-              </p>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Continue where you left off.
-              </p>
-            </div>
+            ) : (
+              <div className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-4 sm:p-5 space-y-2">
+                <div className="flex items-center gap-2 text-[#059669]">
+                  <HelpCircle className="w-4 h-4 shrink-0" />
+                  <span className="text-xs sm:text-[13px] font-bold">
+                    Active Question Bank
+                  </span>
+                </div>
+                <p className="text-xs sm:text-[13px] font-bold text-slate-900 leading-snug">
+                  {questionType} · {selectedTopics.length === availableTopics.length && availableTopics.length > 0 ? "All Topics" : selectedTopics.length === 0 ? "No Topics Selected" : `${selectedTopics.length} Topics Selected`}
+                </p>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {selectedTopics.length === 0
+                    ? "Select one or more topics above to begin practice."
+                    : `${currentTotalQ} dynamic questions available in database.`}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Action CTA Buttons */}
           <div className="space-y-3 pt-4">
             <Link
-              href={`/practice/clinical?topic=${encodeURIComponent(specialty.title)}&speciality=${encodeURIComponent(specialty.title)}&type=${questionType}&mode=resume`}
-              className="w-full py-3 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-blue-500/20 flex items-center justify-center transition-all cursor-pointer"
+              href={
+                hasUnfinishedSession && savedSession
+                  ? `/practice/clinical?topic=${encodeURIComponent(savedSession.speciality || currentTitle)}&speciality=${encodeURIComponent(savedSession.speciality || currentTitle)}&type=${savedSession.questionType}&timer=${savedSession.timer}&mode=resume&topics=${encodeURIComponent(savedSession.topics)}`
+                  : "#"
+              }
+              className={`w-full py-3 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-blue-500/20 flex items-center justify-center transition-all ${
+                hasUnfinishedSession
+                  ? "cursor-pointer opacity-100"
+                  : "opacity-40 pointer-events-none cursor-not-allowed"
+              }`}
             >
               <span>Resume Session</span>
             </Link>
 
             <Link
-              href={`/practice/clinical?topic=${encodeURIComponent(specialty.title)}&speciality=${encodeURIComponent(specialty.title)}&type=${questionType}&mode=new`}
-              className="w-full py-3 rounded-xl bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-brand-orange/20 flex items-center justify-center transition-all cursor-pointer"
+              href={`/practice/clinical?topic=${encodeURIComponent(currentTitle)}&speciality=${encodeURIComponent(currentTitle)}&type=${questionType}&timer=${timerEnabled ? "on" : "off"}&mode=new&topics=${topicMode === "all" ? "all" : encodeURIComponent(selectedTopics.join(","))}`}
+              className={`w-full py-3 rounded-xl bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-brand-orange/20 flex items-center justify-center transition-all ${
+                selectedTopics.length === 0 ? "opacity-40 pointer-events-none cursor-not-allowed" : "cursor-pointer"
+              }`}
             >
               <span>Start New Session</span>
             </Link>

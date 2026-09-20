@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Clock, ChevronLeft, ChevronRight, Flag, AlertCircle, ArrowUp, ArrowDown, CheckCircle2, RotateCcw } from "lucide-react";
 import { QuestionNavigator } from "../_components/QuestionNavigator";
+import { ExamResultView } from "../_components/ExamResultView";
+import { formatAverageTime } from "@/lib/practiceSession";
 
 interface RankingOption {
   id: string;
@@ -96,6 +98,7 @@ function ProfessionalDilemmasPracticeContent() {
   const [flagged, setFlagged] = useState<Record<number, boolean>>({});
   const [timeRemaining, setTimeRemaining] = useState(45 * 60); // 45 minutes MSRA standard
   const [showExitModal, setShowExitModal] = useState(false);
+  const [isSessionFinished, setIsSessionFinished] = useState(false);
 
   // Initialize rankings for current question
   useEffect(() => {
@@ -109,12 +112,12 @@ function ProfessionalDilemmasPracticeContent() {
 
   // Countdown timer if enabled
   useEffect(() => {
-    if (!timerSetting) return;
+    if (!timerSetting || isSessionFinished) return;
     const interval = setInterval(() => {
       setTimeRemaining((t) => (t > 0 ? t - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
-  }, [timerSetting]);
+  }, [timerSetting, isSessionFinished]);
 
   const currentQ = questions[currentIndex] || questions[0];
   const currentRankOrder = userRankings[currentIndex] || currentQ.options.map((o) => o.id);
@@ -141,7 +144,7 @@ function ProfessionalDilemmasPracticeContent() {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      setShowExitModal(true);
+      setIsSessionFinished(true);
     }
   };
 
@@ -161,6 +164,48 @@ function ProfessionalDilemmasPracticeContent() {
   Object.keys(submittedAnswers).forEach((idxStr) => {
     answeredMap[parseInt(idxStr)] = true;
   });
+
+  if (isSessionFinished) {
+    const answeredCount = Object.keys(submittedAnswers).length;
+    let totalItems = 0;
+    let correctMatches = 0;
+    Object.keys(submittedAnswers).forEach((idxStr) => {
+      const qIdx = parseInt(idxStr);
+      const q = questions[qIdx];
+      if (!q) return;
+      const ranks = userRankings[qIdx] || q.options.map((o) => o.id);
+      ranks.forEach((optId, rIdx) => {
+        totalItems += 1;
+        const opt = q.options.find((o) => o.id === optId);
+        if (opt && opt.idealRank === rIdx + 1) {
+          correctMatches += 1;
+        }
+      });
+    });
+    const accuracy = totalItems > 0 ? Math.round((correctMatches / totalItems) * 100) : 100;
+    const avgSec = answeredCount > 0 ? Math.round((45 * 60 - timeRemaining) / answeredCount) : 0;
+    const avgTime = formatAverageTime(avgSec);
+
+    return (
+      <ExamResultView
+        specialtyOrTitle={topicParam || "Professional Dilemmas"}
+        overallAccuracy={accuracy}
+        questionsAttempted={answeredCount > 0 ? answeredCount : questions.length}
+        averageTime={avgTime}
+        returnUrl="/dashboard/professional-dilemmas"
+        onRetake={() => {
+          setSubmittedAnswers({});
+          setUserRankings({});
+          setFlagged({});
+          setTimeRemaining(45 * 60);
+          setCurrentIndex(0);
+          setIsSessionFinished(false);
+          setShowExitModal(false);
+        }}
+        examType="PD"
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#edf0f4] text-slate-800 flex flex-col font-sans">

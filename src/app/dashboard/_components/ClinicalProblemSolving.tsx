@@ -7,6 +7,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { ChevronRight, Loader2, HelpCircle } from "lucide-react";
 import { overviewApi } from "@/services/overviewApi";
+import { getSpecialtyStats } from "@/lib/practiceSession";
 
 interface Topic {
   id: string;
@@ -58,6 +59,16 @@ function parseTopicItem(t: any, userId?: string): Topic {
       } catch (e) {
         console.error("Error parsing saved attempt:", e);
       }
+    }
+
+    // Also cross-reference cumulative CPS session stats
+    const cpsStats = getSpecialtyStats(t.title || topicId, totalQ);
+    if (cpsStats.attempted > 0) {
+      correct = Math.max(correct, cpsStats.correct);
+      wrong = Math.max(wrong, Math.max(0, cpsStats.attempted - cpsStats.correct));
+      accuracyPct = cpsStats.accuracy;
+      attemptsPct = cpsStats.progressPercent;
+      hasAttempted = true;
     }
   }
 
