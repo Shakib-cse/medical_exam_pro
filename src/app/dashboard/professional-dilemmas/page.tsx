@@ -3,54 +3,101 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { overviewApi, DilemmaCardData } from "@/services/overviewApi";
+import {
+  getPDStats,
+  formatAverageTime,
+  getCurrentUserId,
+  CPSSpecialtyStats,
+} from "@/lib/practiceSession";
 
 interface DomainCard {
   id: string;
   title: string;
   subtitle: string;
   image: string;
+  totalQ: number;
+  rankingCount: number;
+  select3Count: number;
   practiceHref: string;
 }
 
 const DEFAULT_DOMAINS: DomainCard[] = [
   {
-    id: "professional-integrity",
-    title: "Professional Integrity",
-    subtitle: "Probity, safety and candour",
-    image: "/images/dilemmas/professional-integrity.jpg",
-    practiceHref: "/dashboard/professional-dilemmas/professional-integrity",
-  },
-  {
     id: "coping-with-pressure",
     title: "Coping with Pressure",
-    subtitle: "Prioritisation under stress",
+    subtitle: "Prioritisation under stress, fatigue and escalation",
     image: "/images/dilemmas/coping-with-pressure.jpg",
+    totalQ: 399,
+    rankingCount: 195,
+    select3Count: 204,
     practiceHref: "/dashboard/professional-dilemmas/coping-with-pressure",
   },
   {
     id: "empathy-and-sensitivity",
-    title: "Empathy and Sensitivity",
-    subtitle: "Patient-centred judgement",
+    title: "Empathy & Sensitivity",
+    subtitle: "Patient-centred judgement, communication and vulnerability",
     image: "/images/dilemmas/empathy-and-sensitivity.jpg",
+    totalQ: 1072,
+    rankingCount: 537,
+    select3Count: 535,
     practiceHref: "/dashboard/professional-dilemmas/empathy-and-sensitivity",
+  },
+  {
+    id: "professional-integrity",
+    title: "Professionalism & Integrity",
+    subtitle: "Probity, safety, confidentiality and candour",
+    image: "/images/dilemmas/professional-integrity.jpg",
+    totalQ: 1034,
+    rankingCount: 521,
+    select3Count: 513,
+    practiceHref: "/dashboard/professional-dilemmas/professional-integrity",
   },
 ];
 
 export default function ProfessionalDilemmasPage() {
   const [domainCards, setDomainCards] = useState<DomainCard[]>(DEFAULT_DOMAINS);
-  const [stats, setStats] = useState({
-    attempted: 325,
-    totalQuestions: 2505,
-    overallAccuracy: 72,
-    averageTime: "1m 26s",
-  });
+  const user = useSelector((state: RootState) => (state as any).auth?.user);
+  const [statsMap, setStatsMap] = useState<Record<string, CPSSpecialtyStats>>({});
 
-  // Calculate current progress percentage
-  const currentProgressPercent = Math.min(
-    100,
-    Math.round((stats.attempted / stats.totalQuestions) * 100)
-  );
+  useEffect(() => {
+    function loadAllStats() {
+      const activeUserId = user?.id || getCurrentUserId();
+      const map: Record<string, CPSSpecialtyStats> = {};
+      for (const item of domainCards) {
+        const byId = getPDStats(item.id, item.totalQ, activeUserId);
+        const byTitle = getPDStats(item.title, item.totalQ, activeUserId);
+        map[item.id] = byTitle.attempted >= byId.attempted ? byTitle : byId;
+      }
+      setStatsMap(map);
+    }
+
+    loadAllStats();
+    window.addEventListener("focus", loadAllStats);
+    window.addEventListener("storage", loadAllStats);
+    window.addEventListener("pd_session_update", loadAllStats);
+    return () => {
+      window.removeEventListener("focus", loadAllStats);
+      window.removeEventListener("storage", loadAllStats);
+      window.removeEventListener("pd_session_update", loadAllStats);
+    };
+  }, [user?.id, domainCards]);
+
+  const totalQuestions = domainCards.reduce((acc, curr) => acc + curr.totalQ, 0); // 2,505
+  let attempted = 0;
+  let correct = 0;
+  let totalTimeSec = 0;
+  for (const s of Object.values(statsMap)) {
+    attempted += s.attempted;
+    correct += s.correct;
+    totalTimeSec += s.totalTimeSeconds;
+  }
+  const currentProgressPercent = totalQuestions > 0 ? Math.min(100, Math.round((attempted / totalQuestions) * 100)) : 0;
+  const overallAccuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+  const avgSec = attempted > 0 ? totalTimeSec / attempted : 0;
+  const averageTime = formatAverageTime(avgSec);
 
   // Load custom cards or user stats if available
   useEffect(() => {
@@ -63,16 +110,41 @@ export default function ProfessionalDilemmasPage() {
           res.data.professional_dilemmas.content.length > 0
         ) {
           const apiCards: DilemmaCardData[] = res.data.professional_dilemmas.content;
-          // If valid custom cards are present, merge them with practice links
           if (apiCards.length >= 3) {
+            const DILEMMA_IMAGES: Record<string, string> = {
+              "coping-with-pressure": "/images/dilemmas/coping-with-pressure.jpg",
+              "empathy-and-sensitivity": "/images/dilemmas/empathy-and-sensitivity.jpg",
+              "empathy-sensitivity": "/images/dilemmas/empathy-and-sensitivity.jpg",
+              "professionalism-and-integrity": "/images/dilemmas/professional-integrity.jpg",
+              "professionalism-integrity": "/images/dilemmas/professional-integrity.jpg",
+              "professional-integrity": "/images/dilemmas/professional-integrity.jpg",
+            };
+
             setDomainCards(
-              apiCards.map((c, idx) => ({
-                id: `domain-${idx}`,
-                title: c.title,
-                subtitle: c.subtitle,
-                image: c.image || DEFAULT_DOMAINS[idx % DEFAULT_DOMAINS.length].image,
-                practiceHref: `/dashboard/professional-dilemmas/${c.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-              }))
+              apiCards.map((c, idx) => {
+                const cleanSlug = c.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                const fallback =
+                  DEFAULT_DOMAINS.find(
+                    (d) => d.id === cleanSlug || d.title.toLowerCase() === c.title.toLowerCase()
+                  ) || DEFAULT_DOMAINS[idx % DEFAULT_DOMAINS.length];
+
+                const resolvedImage =
+                  DILEMMA_IMAGES[cleanSlug] ||
+                  (c.image && !c.image.includes("-sensitivity") && !c.image.includes("-integrity")
+                    ? c.image
+                    : fallback.image);
+
+                return {
+                  id: c.id || `domain-${idx}`,
+                  title: c.title,
+                  subtitle: c.subtitle,
+                  image: resolvedImage,
+                  totalQ: c.totalQ || fallback.totalQ,
+                  rankingCount: c.rankingCount || fallback.rankingCount,
+                  select3Count: c.select3Count || fallback.select3Count,
+                  practiceHref: `/dashboard/professional-dilemmas/${cleanSlug}`,
+                };
+              })
             );
           }
         }
@@ -106,7 +178,7 @@ export default function ProfessionalDilemmasPage() {
             </p>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl lg:text-[36px] font-bold text-[#141B25] tracking-tight">
-                {stats.attempted.toLocaleString()} / {stats.totalQuestions.toLocaleString()}
+                {attempted.toLocaleString()} / {totalQuestions.toLocaleString()}
               </span>
             </div>
           </div>
@@ -132,7 +204,7 @@ export default function ProfessionalDilemmasPage() {
               Overall Accuracy
             </p>
             <div className="text-3xl sm:text-4xl lg:text-[42px] font-bold text-[#141B25] tracking-tight">
-              {stats.overallAccuracy}%
+              {overallAccuracy}%
             </div>
           </div>
 
@@ -158,7 +230,7 @@ export default function ProfessionalDilemmasPage() {
                 stroke="#1D82EB"
                 strokeWidth="6.5"
                 strokeDasharray={2 * Math.PI * 33}
-                strokeDashoffset={(2 * Math.PI * 33) * (1 - stats.overallAccuracy / 100)}
+                strokeDashoffset={(2 * Math.PI * 33) * (1 - overallAccuracy / 100)}
                 strokeLinecap="butt"
                 fill="none"
                 className="transition-all duration-700 ease-out"
@@ -166,7 +238,7 @@ export default function ProfessionalDilemmasPage() {
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-[11px] sm:text-xs font-bold text-[#0F172A]">
-                {stats.overallAccuracy}%
+                {overallAccuracy}%
               </span>
             </div>
           </div>
@@ -179,7 +251,7 @@ export default function ProfessionalDilemmasPage() {
               Average Time/ Question
             </p>
             <div className="text-2xl sm:text-3xl lg:text-[36px] font-bold text-[#141B25] tracking-tight">
-              {stats.averageTime}
+              {averageTime}
             </div>
           </div>
 
@@ -227,13 +299,40 @@ export default function ProfessionalDilemmasPage() {
             </div>
 
             {/* Domain Info */}
-            <div className="space-y-1 px-1">
-              <h3 className="text-base sm:text-lg font-bold text-[#141B25] tracking-tight leading-snug">
-                {domain.title}
-              </h3>
-              <p className="text-xs sm:text-[13.5px] text-[#64748B] font-normal">
+            <div className="space-y-2 px-1">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-[#141B25] tracking-tight leading-snug">
+                  {domain.title}
+                </h3>
+                <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 shrink-0">
+                  {domain.totalQ.toLocaleString()} Qs
+                </span>
+              </div>
+              <p className="text-xs sm:text-[13.5px] text-[#64748B] font-normal line-clamp-2">
                 {domain.subtitle}
               </p>
+              <div className="flex items-center flex-wrap gap-1.5 pt-0.5 text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                  {domain.rankingCount} Ranking
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60">
+                  {domain.select3Count} Select 3
+                </span>
+                {(() => {
+                  const cardStats = statsMap[domain.id];
+                  return (
+                    <span
+                      className={`px-2 py-0.5 rounded-md ${
+                        cardStats && cardStats.attempted > 0
+                          ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                          : "bg-slate-50 text-slate-500 border border-slate-200/60"
+                      }`}
+                    >
+                      {cardStats && cardStats.attempted > 0 ? `${cardStats.accuracy}% Acc` : "Unattempted"}
+                    </span>
+                  );
+                })()}
+              </div>
             </div>
 
             {/* Action CTA Button */}

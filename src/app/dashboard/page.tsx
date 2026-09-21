@@ -7,25 +7,22 @@ import { DashboardWelcome } from "./_components/DashboardWelcome";
 import { TopStatCards } from "./_components/TopStatCards";
 import { OverallPerformance } from "./_components/OverallPerformance";
 import { WeakAreasTable, WeakAreaItem } from "./_components/WeakAreasTable";
+import { getCurrentUserId } from "@/lib/practiceSession";
 
 export default function DashboardPage() {
   const user = useSelector((state: RootState) => state.auth.user);
   const [stats, setStats] = useState({
-    attempted: 2145,
+    attempted: 0,
     totalQuestions: 11007,
-    overallAccuracy: 68,
-    averageTime: "1m 12s",
-    cps: { attempted: 1820, total: 8502, accuracy: 18 },
-    pd: { attempted: 325, total: 2505, accuracy: 13 },
-    mocks: { taken: 4, total: 10, avgScore: 71 },
-    weakAreas: [
-      { id: "1", topic: "Arrhythmias", speciality: "Cardiology", accuracy: 32 },
-      { id: "2", topic: "Epilepsy", speciality: "Neurology", accuracy: 26 },
-      { id: "3", topic: "Interstitial Lung Disease", speciality: "Respiratory", accuracy: 36 },
-    ] as WeakAreaItem[],
-    flaggedCount: 128,
-    incorrectCount: 412,
-    unattemptedCount: 1265,
+    overallAccuracy: 0,
+    averageTime: "0m 00s",
+    cps: { attempted: 0, total: 8502, accuracy: 0 },
+    pd: { attempted: 0, total: 2505, accuracy: 0 },
+    mocks: { taken: 0, total: 10, avgScore: 0 },
+    weakAreas: [] as WeakAreaItem[],
+    flaggedCount: 0,
+    incorrectCount: 0,
+    unattemptedCount: 11007,
     subscriptionDaysLeft: 42,
   });
 
@@ -33,7 +30,9 @@ export default function DashboardPage() {
     // Load local stats or practice history if available
     try {
       if (typeof window !== "undefined") {
-        const savedStats = localStorage.getItem("medicalexampro_user_stats");
+        const activeUserId = user?.id || getCurrentUserId();
+        const userPrefix = activeUserId ? `user_${activeUserId}_` : "";
+        const savedStats = localStorage.getItem(`${userPrefix}medicalexampro_user_stats`);
         if (savedStats) {
           const parsed = JSON.parse(savedStats);
           setStats((prev) => ({ ...prev, ...parsed }));
@@ -42,7 +41,7 @@ export default function DashboardPage() {
     } catch (e) {
       console.warn("Could not load stored user stats:", e);
     }
-  }, []);
+  }, [user?.id]);
 
   const handleResetProgress = () => {
     setStats({

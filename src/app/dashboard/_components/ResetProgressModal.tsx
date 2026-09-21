@@ -28,6 +28,27 @@ export function ResetProgressModal({
         localStorage.removeItem("medicalexampro_user_stats");
         localStorage.removeItem("medicalexampro_flagged_questions");
         localStorage.removeItem("medicalexampro_exam_history");
+
+        // Clear all specialty session and stats keys
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (
+            key &&
+            (key.startsWith("cps_session_") ||
+              key.startsWith("cps_stats_") ||
+              key.startsWith("pd_session_") ||
+              key.startsWith("pd_stats_") ||
+              key.includes("cps_session_") ||
+              key.includes("pd_session_") ||
+              key.includes("cps_stats_") ||
+              key.includes("pd_stats_") ||
+              key.startsWith("topic_last_attempt_") ||
+              key.includes("topic_last_attempt_"))
+          ) {
+            localStorage.removeItem(key);
+          }
+        }
+        window.dispatchEvent(new Event("storage"));
       }
       onConfirm();
       setSuccess(true);

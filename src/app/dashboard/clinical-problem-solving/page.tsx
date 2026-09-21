@@ -4,136 +4,46 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, ArrowRight } from "lucide-react";
-import { getSpecialtyStats, formatAverageTime, CPSSpecialtyStats } from "@/lib/practiceSession";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import {
+  getSpecialtyStats,
+  formatAverageTime,
+  CPSSpecialtyStats,
+  getCurrentUserId,
+  CPS_SPECIALTIES_CONFIG,
+} from "@/lib/practiceSession";
 
 interface SpecialityCardData {
   id: string;
   title: string;
   image: string;
   totalQ: number;
+  sbaCount?: number;
+  emqCount?: number;
 }
 
-const specialitiesData: SpecialityCardData[] = [
-  {
-    id: "cardiovascular",
-    title: "Cardiovascular Medicine",
-    image: "/images/specialties/cardiovascular.png",
-    totalQ: 322,
-  },
-  {
-    id: "dermatology",
-    title: "Dermatology",
-    image: "/images/specialties/dermatology.png",
-    totalQ: 268,
-  },
-  {
-    id: "endocrinology",
-    title: "Endocrinology & Diabetes",
-    image: "/images/specialties/endocrinology.png",
-    totalQ: 320,
-  },
-  {
-    id: "ent",
-    title: "ENT",
-    image: "/images/specialties/ent.png",
-    totalQ: 208,
-  },
-  {
-    id: "gastroenterology",
-    title: "Gastroenterology & Hepatology",
-    image: "/images/specialties/gastroenterology.png",
-    totalQ: 399,
-  },
-  {
-    id: "immunology",
-    title: "Genetics & Immunology",
-    image: "/images/specialties/immunology.png",
-    totalQ: 126,
-  },
-  {
-    id: "haematology",
-    title: "Haematology & Oncology",
-    image: "/images/specialties/haematology.png",
-    totalQ: 310,
-  },
-  {
-    id: "infectious",
-    title: "Infectious Diseases",
-    image: "/images/specialties/infectious.png",
-    totalQ: 147,
-  },
-  {
-    id: "neurology",
-    title: "Neurology",
-    image: "/images/specialties/neurology.png",
-    totalQ: 288,
-  },
-  {
-    id: "ophthalmology",
-    title: "Ophthalmology",
-    image: "/images/specialties/ophthalmology.png",
-    totalQ: 183,
-  },
-  {
-    id: "paediatrics",
-    title: "Paediatrics",
-    image: "/images/specialties/paediatrics.png",
-    totalQ: 405,
-  },
-  {
-    id: "pharmacology",
-    title: "Pharmacology",
-    image: "/images/specialties/pharmacology.png",
-    totalQ: 478,
-  },
-  {
-    id: "psychiatry",
-    title: "Psychiatry",
-    image: "/images/specialties/psychiatry.png",
-    totalQ: 221,
-  },
-  {
-    id: "renal",
-    title: "Renal Medicine & Urology",
-    image: "/images/specialties/renal.png",
-    totalQ: 339,
-  },
-  {
-    id: "reproductive",
-    title: "Reproductive Medicine",
-    image: "/images/specialties/reproductive.png",
-    totalQ: 591,
-  },
-  {
-    id: "respiratory",
-    title: "Respiratory Medicine",
-    image: "/images/specialties/respiratory.png",
-    totalQ: 448,
-  },
-  {
-    id: "musculoskeletal",
-    title: "Rheumatology & Musculoskeletal Medicine",
-    image: "/images/specialties/musculoskeletal.png",
-    totalQ: 372,
-  },
-  {
-    id: "surgery",
-    title: "Surgery & Orthopaedics",
-    image: "/images/specialties/surgery.png",
-    totalQ: 83,
-  },
-];
+const specialitiesData: SpecialityCardData[] = CPS_SPECIALTIES_CONFIG.map((item) => ({
+  id: item.id,
+  title: item.title,
+  image: `/images/specialties/${item.id}.png`,
+  totalQ: item.totalQ,
+  sbaCount: item.sbaCount,
+  emqCount: item.emqCount,
+}));
 
 export default function ClinicalProblemSolvingPage() {
+  const user = useSelector((state: RootState) => state.auth.user);
   const [filter, setFilter] = useState<"all" | "weakest" | "in_progress">("all");
   const [statsMap, setStatsMap] = useState<Record<string, CPSSpecialtyStats>>({});
 
   useEffect(() => {
     function loadAllStats() {
+      const activeUserId = user?.id || getCurrentUserId();
       const map: Record<string, CPSSpecialtyStats> = {};
       for (const item of specialitiesData) {
-        const byId = getSpecialtyStats(item.id, item.totalQ);
-        const byTitle = getSpecialtyStats(item.title, item.totalQ);
+        const byId = getSpecialtyStats(item.id, item.totalQ, activeUserId);
+        const byTitle = getSpecialtyStats(item.title, item.totalQ, activeUserId);
         map[item.id] = byTitle.attempted >= byId.attempted ? byTitle : byId;
       }
       setStatsMap(map);
@@ -143,13 +53,15 @@ export default function ClinicalProblemSolvingPage() {
 
     window.addEventListener("focus", loadAllStats);
     window.addEventListener("storage", loadAllStats);
+    window.addEventListener("practice_session_update", loadAllStats);
     return () => {
       window.removeEventListener("focus", loadAllStats);
       window.removeEventListener("storage", loadAllStats);
+      window.removeEventListener("practice_session_update", loadAllStats);
     };
-  }, []);
+  }, [user?.id]);
 
-  const totalQuestions = specialitiesData.reduce((acc, curr) => acc + curr.totalQ, 0); // 5,508
+  const totalQuestions = specialitiesData.reduce((acc, curr) => acc + curr.totalQ, 0); // 8,502 total questions
   let attempted = 0;
   let correct = 0;
   let totalTimeSec = 0;
@@ -368,13 +280,22 @@ export default function ClinicalProblemSolvingPage() {
             {/* Content & Metrics */}
             <div className="pt-3 pb-0.5 space-y-3 flex-1 flex flex-col justify-between">
               {/* Title & subtle bottom divider */}
-              <div className="border-b border-slate-100 pb-2.5">
+              <div className="border-b border-slate-100 pb-2.5 space-y-1">
                 <h3
                   className="font-bold text-slate-900 text-sm sm:text-[15px] leading-tight min-h-[1.5rem] flex items-center truncate"
                   title={item.title}
                 >
                   {item.title}
                 </h3>
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                  <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
+                    {item.sbaCount ? `${item.sbaCount} SBA` : "SBA"}
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 font-bold">
+                    {item.emqCount ? `${item.emqCount} EMQ` : "EMQ"}
+                  </span>
+                </div>
               </div>
 
               {/* 5-Column Stats Box */}

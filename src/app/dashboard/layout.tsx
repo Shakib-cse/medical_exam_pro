@@ -22,7 +22,7 @@ export default function DashboardLayout({
         {/* Fixed Floating Bottom Quick Access Bar */}
         <div className="fixed bottom-3 sm:bottom-4 left-4 right-4 lg:left-[calc(16rem+1.5rem)] lg:right-6 xl:right-7 z-40 pointer-events-none">
           <div className="pointer-events-auto max-w-7xl mx-auto">
-            {/* <QuickAccessHighlights /> */}
+            <QuickAccessHighlights />
           </div>
         </div>
       </div>

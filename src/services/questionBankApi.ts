@@ -7,9 +7,16 @@ export interface QuestionBankQuestion {
   correctAnswer: number;
   explanation?: string;
   subTopic?: string;
-  questionType?: "SBA" | "EMQ";
+  questionType?: "SBA" | "EMQ" | "RANKING" | "SELECT_3";
   themeNumber?: number | null;
   cases?: any;
+  idealOrder?: string[];
+  correctAnswers?: string[];
+  peerStats?: Record<string, number>;
+  totalAttempts?: number;
+  selectionCounts?: Record<string, number>;
+  instruction?: string;
+  references?: string;
 }
 
 export interface QuestionBankItemData {
@@ -23,7 +30,17 @@ export interface QuestionBankItemData {
   difficultyType: "moderate" | "advanced" | "clinical" | "standard";
   durationMinutes?: number;
   questionCount: number;
+  totalQuestions?: number;
+  sbaCount?: number;
+  emqCount?: number;
+  emqThemesCount?: number;
+  rankingCount?: number;
+  select3Count?: number;
   subTopics?: string[];
+  subTopicCounts?: Record<
+    string,
+    { total: number; ranking: number; select3: number; sba: number; emq: number }
+  >;
   questions?: QuestionBankQuestion[];
   avgAcc: string;
   isUnattempted: boolean;
@@ -71,6 +88,25 @@ export const questionBankApi = {
     payload: { userAnswers: Record<string, number>; timeTakenSeconds: number }
   ) => {
     const res = await api.post<ApiResponse<any>>(`/question-bank/attempt/${attemptId}/submit`, payload);
+    return res.data;
+  },
+
+  recordQuestionAnswer: async (
+    questionId: string,
+    payload: {
+      selectedOptions?: string[];
+      rankOrder?: string[];
+    }
+  ) => {
+    const res = await api.post<
+      ApiResponse<{
+        questionId: string;
+        peerStats: Record<string, number>;
+        totalAttempts: number;
+        selectionCounts: Record<string, number>;
+        userSelections?: string[];
+      }>
+    >(`/question-bank/questions/${questionId}/answer`, payload);
     return res.data;
   },
 };

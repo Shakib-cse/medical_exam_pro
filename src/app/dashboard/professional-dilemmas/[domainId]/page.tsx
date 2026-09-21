@@ -3,191 +3,201 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Info, Play, ArrowLeft } from "lucide-react";
-import { overviewApi } from "@/services/overviewApi";
+import { Check, Info, Play, ArrowLeft, Clock, Loader2 } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { questionBankApi, QuestionBankItemData } from "@/services/questionBankApi";
+import {
+  getSavedPDSession,
+  getPDStats,
+  PDSavedSession,
+  formatAverageTime,
+  getCurrentUserId,
+  PD_DOMAINS_CONFIG,
+} from "@/lib/practiceSession";
 
-export interface DomainDetailConfig {
-  id: string;
-  title: string;
-  subtitle: string;
-  attempted: number;
-  totalQuestions: number;
-  overallAccuracy: number;
-  progressPercent: number;
-  averageTime: string;
-  topics: string[];
-}
-
-const DEFAULT_DOMAIN_CONFIGS: Record<string, DomainDetailConfig> = {
-  "professional-integrity": {
-    id: "professional-integrity",
-    title: "Professional Integrity",
-    subtitle: "Practice professional integrity questions.",
-    attempted: 325,
-    totalQuestions: 2505,
-    overallAccuracy: 66,
-    progressPercent: 20,
-    averageTime: "1m 26s",
-    topics: [
-      "Ethical Dilemmas in Clinical Trials",
-      "Informed Consent in Medical Research",
-      "Balancing Patient Privacy and Care",
-      "Conflicts of Interest in Healthcare",
-      "End-of-Life Care Decisions",
-      "Resource Allocation in Emergency Medicine",
-      "Telemedicine and Patient Autonomy",
-      "Cultural Sensitivity in Patient Care",
-      "Maintaining Professional Boundaries in Therapy",
-    ],
-  },
-  "coping-with-pressure": {
-    id: "coping-with-pressure",
-    title: "Coping with Pressure",
-    subtitle: "Practice coping with pressure questions.",
-    attempted: 290,
-    totalQuestions: 2505,
-    overallAccuracy: 70,
-    progressPercent: 18,
-    averageTime: "1m 22s",
-    topics: [
-      "Prioritisation Under Acute Workload",
-      "Delegation and Escalation in Emergencies",
-      "Managing Fatigue and Sleep Deprivation",
-      "Handling Multiple Critically Ill Patients",
-      "Time Management in High-Volume Clinics",
-      "Stress Inoculation and Team Resilience",
-      "Coping with Unexpected Clinical Complications",
-      "Workplace Conflict Under Stress",
-      "Maintaining Composure in Challenging Consultations",
-    ],
-  },
-  "empathy-and-sensitivity": {
-    id: "empathy-and-sensitivity",
-    title: "Empathy and Sensitivity",
-    subtitle: "Practice empathy and sensitivity questions.",
-    attempted: 310,
-    totalQuestions: 2505,
-    overallAccuracy: 74,
-    progressPercent: 22,
-    averageTime: "1m 18s",
-    topics: [
-      "Breaking Bad News with Compassion",
-      "Navigating Challenging Family Dynamics",
-      "Managing Anxious and Agitated Patients",
-      "Cross-Cultural Communication and Beliefs",
-      "Supporting Bereaved Relatives",
-      "Shared Decision-Making with Vulnerable Patients",
-      "Recognising Hidden Emotional Distress",
-      "Non-Verbal Communication and Active Listening",
-      "Respecting Patient Autonomy and Refusal of Treatment",
-    ],
-  },
-};
+// In-memory cache for instant client navigation
+const pdClientCache = new Map<string, QuestionBankItemData>();
 
 export default function ProfessionalDilemmaDomainPage() {
   const router = useRouter();
   const params = useParams();
-  const rawDomainId = (params?.domainId as string) || "professional-integrity";
+  const rawDomainId = (params?.domainId as string) || "coping-with-pressure";
   const normalizedId = rawDomainId.toLowerCase();
 
-  // Find or generate domain config
-  const initialConfig: DomainDetailConfig =
-    DEFAULT_DOMAIN_CONFIGS[normalizedId] || {
-      id: normalizedId,
-      title: rawDomainId
-        .split("-")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" "),
-      subtitle: `Practice ${rawDomainId.replace(/-/g, " ")} questions.`,
-      attempted: 325,
-      totalQuestions: 2505,
-      overallAccuracy: 66,
-      progressPercent: 20,
-      averageTime: "1m 26s",
-      topics: [
-        "Ethical Dilemmas in Clinical Trials",
-        "Informed Consent in Medical Research",
-        "Balancing Patient Privacy and Care",
-        "Conflicts of Interest in Healthcare",
-        "End-of-Life Care Decisions",
-        "Resource Allocation in Emergency Medicine",
-        "Telemedicine and Patient Autonomy",
-        "Cultural Sensitivity in Patient Care",
-        "Maintaining Professional Boundaries in Therapy",
-      ],
-    };
+  // Find fallback config from static definition
+  const fallbackConfig = PD_DOMAINS_CONFIG.find(
+    (c) => c.id === normalizedId || c.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") === normalizedId
+  ) || PD_DOMAINS_CONFIG[0];
 
-  const [domain, setDomain] = useState<DomainDetailConfig>(initialConfig);
+  // Dynamic question bank state from backend API
+  const [dynamicBank, setDynamicBank] = useState<QuestionBankItemData | null>(() => {
+    return pdClientCache.get(normalizedId) || null;
+  });
+  const [loadingBank, setLoadingBank] = useState<boolean>(!dynamicBank);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Practice settings state
   const [timerEnabled, setTimerEnabled] = useState(true);
   const [questionType, setQuestionType] = useState<"Ranking" | "Select - 3" | "Both">("Ranking");
-  const [topicMode, setTopicMode] = useState<"all" | "choose">("all");
-  const [selectedTopics, setSelectedTopics] = useState<string[]>(initialConfig.topics);
+  
+  // Topic selection state: BY DEFAULT ALL UNSELECTED (empty array) and mode is "choose"
+  const [topicMode, setTopicMode] = useState<"all" | "choose">("choose");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
 
-  // Dynamic fetch to support future custom backend topics
+  // Saved in-progress session state for resuming
+  const [savedSession, setSavedSession] = useState<PDSavedSession | null>(null);
+
+  const user = useSelector((state: RootState) => (state as any).auth?.user);
+  const activeUserId = user?.id || getCurrentUserId();
+
+  // Dynamic question counts and subtopics from database
+  const availableTopics =
+    dynamicBank?.subTopics && dynamicBank.subTopics.length > 0
+      ? dynamicBank.subTopics
+      : fallbackConfig.topics;
+
+  const currentTitle = dynamicBank?.title || fallbackConfig.title;
+  const currentSubtitle =
+    dynamicBank?.description ||
+    fallbackConfig.subtitle ||
+    `Practice ${currentTitle} questions.`;
+
+  const rankingCount = (dynamicBank as any)?.rankingCount ?? fallbackConfig.rankingCount ?? 0;
+  const select3Count = (dynamicBank as any)?.select3Count ?? fallbackConfig.select3Count ?? 0;
+  const totalQuestions =
+    dynamicBank?.totalQuestions ||
+    dynamicBank?.questionCount ||
+    (rankingCount + select3Count) ||
+    fallbackConfig.totalQ;
+
+  // 1. Fetch dynamic question bank and subtopics from database
   useEffect(() => {
-    async function loadDynamicDomain() {
+    let isMounted = true;
+
+    async function fetchBankData() {
       try {
-        const res = await overviewApi.getOverviewContent();
-        if (
-          res?.data?.professional_dilemmas?.content &&
-          Array.isArray(res.data.professional_dilemmas.content)
-        ) {
-          const matched = res.data.professional_dilemmas.content.find(
-            (c: any) =>
-              c.id === normalizedId ||
-              c.title?.toLowerCase().replace(/[^a-z0-9]+/g, "-") === normalizedId ||
-              c.title?.toLowerCase() === normalizedId.replace(/-/g, " ")
-          );
-
-          if (matched) {
-            setDomain((prev) => {
-              const updatedTopics =
-                Array.isArray(matched.topics) && matched.topics.length > 0
-                  ? matched.topics
-                  : prev.topics;
-
-              setSelectedTopics(updatedTopics);
-              return {
-                ...prev,
-                title: matched.title || prev.title,
-                subtitle: matched.subtitle
-                  ? `Practice ${matched.subtitle.toLowerCase()}`
-                  : prev.subtitle,
-                topics: updatedTopics,
-              };
-            });
-          }
+        const cached = pdClientCache.get(normalizedId);
+        if (cached && isMounted) {
+          setDynamicBank(cached);
+          setLoadingBank(false);
+        } else if (!cached && isMounted) {
+          setLoadingBank(true);
         }
-      } catch (err) {
-        console.warn("Could not fetch dynamic domain content:", err);
+
+        setLoadError(null);
+        const res = await questionBankApi.getQuestionBankBySpecialty(normalizedId, true);
+        if (isMounted && res?.data) {
+          setDynamicBank(res.data);
+          pdClientCache.set(normalizedId, res.data);
+        }
+      } catch (err: any) {
+        console.error("Failed to load question bank:", err);
+        if (isMounted && !dynamicBank) {
+          setLoadError(err?.message || "Failed to load question bank");
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingBank(false);
+        }
       }
     }
 
-    loadDynamicDomain();
+    fetchBankData();
+    return () => {
+      isMounted = false;
+    };
   }, [normalizedId]);
 
+  // 2. Check for unfinished session on mount and when domain/user changes
+  useEffect(() => {
+    const session =
+      getSavedPDSession(normalizedId, activeUserId) ||
+      getSavedPDSession(currentTitle, activeUserId);
+    if (session && !session.isCompleted && session.totalQuestions > 0) {
+      setSavedSession(session);
+    } else {
+      setSavedSession(null);
+    }
+  }, [normalizedId, currentTitle, activeUserId]);
+
+  const hasUnfinishedSession = Boolean(
+    savedSession && !savedSession.isCompleted && savedSession.totalQuestions > 0
+  );
+
+  // 3. Dynamic statistics state derived from real user sessions & database bank stats
+  const [domainStats, setDomainStats] = useState({
+    attempted: 0,
+    correct: 0,
+    accuracy: 0,
+    totalTimeSeconds: 0,
+    averageTime: "0s",
+    progressPercent: 0,
+  });
+
+  useEffect(() => {
+    // 1. Get client-side saved/live session stats (by slug or title)
+    const statsBySlug = getPDStats(normalizedId, totalQuestions, activeUserId);
+    const statsByTitle = getPDStats(currentTitle, totalQuestions, activeUserId);
+    let chosen = statsBySlug.attempted >= statsByTitle.attempted ? statsBySlug : statsByTitle;
+
+    // 2. Check if backend database attempts have more data
+    const backendStats = dynamicBank?.stats;
+    if (backendStats && backendStats.attempted > chosen.attempted) {
+      chosen = {
+        attempted: backendStats.attempted,
+        correct: backendStats.correct,
+        accuracy: backendStats.accuracy,
+        totalTimeSeconds: backendStats.averageTimeSeconds * backendStats.attempted,
+        averageTime: formatAverageTime(backendStats.averageTimeSeconds),
+        progressPercent:
+          totalQuestions > 0
+            ? Math.min(100, Math.round((backendStats.attempted / totalQuestions) * 100))
+            : 0,
+      };
+    }
+
+    setDomainStats(chosen);
+  }, [normalizedId, currentTitle, totalQuestions, savedSession, dynamicBank, activeUserId]);
+
+  // Topic Selection Handlers
   const toggleTopic = (topic: string) => {
-    setTopicMode("choose");
-    setSelectedTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
-    );
+    let next: string[];
+    if (selectedTopics.includes(topic)) {
+      next = selectedTopics.filter((t) => t !== topic);
+    } else {
+      next = [...selectedTopics, topic];
+    }
+    setSelectedTopics(next);
+
+    // If all options are selected, automatically switch to "all"
+    // If less than all options selected, auto toggle to "choose" (custom select)
+    if (next.length === availableTopics.length && availableTopics.length > 0) {
+      setTopicMode("all");
+    } else {
+      setTopicMode("choose");
+    }
   };
 
   const handleSelectAllTopics = () => {
     setTopicMode("all");
-    setSelectedTopics([...domain.topics]);
+    setSelectedTopics([...availableTopics]);
   };
 
   const handleChooseTopics = () => {
     setTopicMode("choose");
+    // If all were selected, clear selection so candidate can customize from a clean state
+    if (selectedTopics.length === availableTopics.length && availableTopics.length > 0) {
+      setSelectedTopics([]);
+    }
   };
 
   const practiceQuery = new URLSearchParams({
-    topic: domain.title,
+    topic: currentTitle,
     speciality: "Professional Dilemmas",
     type: questionType === "Both" ? "SJT" : questionType,
     timer: timerEnabled ? "on" : "off",
-    topics: selectedTopics.join(","),
+    topics: topicMode === "all" ? "all" : selectedTopics.join("|||"),
   });
 
   return (
@@ -203,15 +213,15 @@ export default function ProfessionalDilemmaDomainPage() {
         </Link>
         <div className="space-y-1">
           <h1 className="text-2xl sm:text-[32px] lg:text-[38px] font-bold text-[#141B25] tracking-tight leading-tight">
-            {domain.title}
+            {currentTitle}
           </h1>
           <p className="text-slate-500 text-xs sm:text-sm lg:text-[16px] font-normal">
-            {domain.subtitle}
+            {currentSubtitle}
           </p>
         </div>
       </div>
 
-      {/* 1. Top Stats (3 Cards) */}
+      {/* 1. Top Stats (3 Cards) - Pure Dynamic Real Data */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 w-full">
         {/* Card 1: Questions Attempted */}
         <div className="bg-white rounded-2xl p-6 sm:p-7 border border-[#E0E4EA] shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[160px] space-y-4">
@@ -221,7 +231,7 @@ export default function ProfessionalDilemmaDomainPage() {
             </p>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl lg:text-[36px] font-bold text-[#141B25] tracking-tight">
-                {domain.attempted.toLocaleString()} / {domain.totalQuestions.toLocaleString()}
+                {domainStats.attempted.toLocaleString()} / {totalQuestions.toLocaleString()}
               </span>
             </div>
           </div>
@@ -229,12 +239,12 @@ export default function ProfessionalDilemmaDomainPage() {
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between text-[11px] sm:text-xs">
               <span className="text-[#64748B] font-normal">Current Progress</span>
-              <span className="text-[#141B25] font-bold">{domain.progressPercent}%</span>
+              <span className="text-[#141B25] font-bold">{domainStats.progressPercent}%</span>
             </div>
             <div className="w-full h-2 bg-[#F1F3F6] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#2589D0] rounded-full transition-all duration-700 ease-out"
-                style={{ width: `${domain.progressPercent}%` }}
+                style={{ width: `${domainStats.progressPercent}%` }}
               />
             </div>
           </div>
@@ -247,11 +257,11 @@ export default function ProfessionalDilemmaDomainPage() {
               Overall Accuracy
             </p>
             <div className="text-3xl sm:text-4xl lg:text-[42px] font-bold text-[#141B25] tracking-tight">
-              {domain.overallAccuracy}%
+              {domainStats.accuracy}%
             </div>
           </div>
 
-          {/* Radial Accuracy Gauge with inner gap padding and disc */}
+          {/* Radial Accuracy Gauge */}
           <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
             <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 80 80">
               <circle cx="40" cy="40" r="23.5" fill="#F1F5F9" />
@@ -270,7 +280,7 @@ export default function ProfessionalDilemmaDomainPage() {
                 stroke="#1D82EB"
                 strokeWidth="6.5"
                 strokeDasharray={2 * Math.PI * 33}
-                strokeDashoffset={(2 * Math.PI * 33) * (1 - domain.overallAccuracy / 100)}
+                strokeDashoffset={(2 * Math.PI * 33) * (1 - domainStats.accuracy / 100)}
                 strokeLinecap="butt"
                 fill="none"
                 className="transition-all duration-700 ease-out"
@@ -278,7 +288,7 @@ export default function ProfessionalDilemmaDomainPage() {
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-[11px] sm:text-xs font-bold text-[#0F172A]">
-                {domain.overallAccuracy}%
+                {domainStats.accuracy}%
               </span>
             </div>
           </div>
@@ -291,7 +301,7 @@ export default function ProfessionalDilemmaDomainPage() {
               Average Time/ Question
             </p>
             <div className="text-2xl sm:text-3xl lg:text-[36px] font-bold text-[#141B25] tracking-tight">
-              {domain.averageTime}
+              {domainStats.averageTime}
             </div>
           </div>
 
@@ -317,7 +327,7 @@ export default function ProfessionalDilemmaDomainPage() {
         </div>
       </div>
 
-      {/* 2. Main Content Grid (Practice Settings + Session) */}
+      {/* 2. Main Practice Settings & Session Split */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6 w-full">
         {/* Left: Practice Settings Container (2 Columns on Desktop) */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 sm:p-7 border border-[#E0E4EA] shadow-[0_4px_16px_rgba(0,0,0,0.02)] space-y-6">
@@ -368,31 +378,52 @@ export default function ProfessionalDilemmaDomainPage() {
               Question Type
             </span>
             <div className="flex items-center gap-2 overflow-x-auto">
-              {(["Ranking", "Select - 3", "Both"] as const).map((type) => {
-                const isActive = questionType === type;
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setQuestionType(type)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none ${
-                      isActive
-                        ? "bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0] shadow-2xs font-bold"
-                        : "bg-[#F1F3F6] text-slate-600 border border-[#E0E4EA] hover:bg-slate-200/70"
-                    }`}
-                  >
-                    {type}
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                onClick={() => setQuestionType("Ranking")}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none ${
+                  questionType === "Ranking"
+                    ? "bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0] shadow-2xs font-bold"
+                    : "bg-[#F1F3F6] text-slate-600 border border-[#E0E4EA] hover:bg-slate-200/70"
+                }`}
+              >
+                Ranking ({rankingCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuestionType("Select - 3")}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none ${
+                  questionType === "Select - 3"
+                    ? "bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0] shadow-2xs font-bold"
+                    : "bg-[#F1F3F6] text-slate-600 border border-[#E0E4EA] hover:bg-slate-200/70"
+                }`}
+              >
+                Select - 3 ({select3Count})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuestionType("Both")}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none ${
+                  questionType === "Both"
+                    ? "bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0] shadow-2xs font-bold"
+                    : "bg-[#F1F3F6] text-slate-600 border border-[#E0E4EA] hover:bg-slate-200/70"
+                }`}
+              >
+                Both ({totalQuestions})
+              </button>
             </div>
           </div>
 
-          {/* Setting 3: Topics Mode */}
+          {/* Setting 3: Topics Mode Selection */}
           <div className="flex items-center justify-between gap-4">
-            <span className="text-xs sm:text-[13.5px] font-medium text-[#64748B] shrink-0">
-              Topics
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-[13.5px] font-medium text-[#64748B] shrink-0">
+                Topics
+              </span>
+              <span className="text-xs font-semibold text-slate-400">
+                ({availableTopics.length} available)
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -421,33 +452,74 @@ export default function ProfessionalDilemmaDomainPage() {
 
           {/* Topics Checkbox List */}
           <div className="space-y-3 pt-2">
-            {domain.topics.map((topic) => {
-              const isChecked = selectedTopics.includes(topic);
-              return (
-                <label
-                  key={topic}
-                  onClick={() => toggleTopic(topic)}
-                  className="flex items-center gap-3 cursor-pointer select-none group"
-                >
-                  <div
-                    className={`w-4 h-4 rounded-[4px] flex items-center justify-center transition-all shrink-0 ${
-                      isChecked
-                        ? "bg-[#1D82EB] text-white"
-                        : "border border-slate-300 bg-white group-hover:border-slate-400"
-                    }`}
-                  >
-                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+            {loadingBank && availableTopics.length === 0 ? (
+              <div className="space-y-3 py-1 animate-pulse">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-[4px] bg-slate-200 shrink-0" />
+                    <div
+                      className="h-3.5 bg-slate-100 rounded-md"
+                      style={{ width: `${50 + (i % 4) * 12}%` }}
+                    />
                   </div>
-                  <span
-                    className={`text-xs sm:text-[13.5px] font-medium transition-colors ${
-                      isChecked ? "text-[#141B25]" : "text-slate-500 group-hover:text-slate-700"
-                    }`}
+                ))}
+              </div>
+            ) : availableTopics.length === 0 ? (
+              <p className="text-xs text-slate-400 py-2">No subtopics found for this domain.</p>
+            ) : (
+              availableTopics.map((topic) => {
+                const isChecked = selectedTopics.includes(topic);
+                const stCounts = (dynamicBank as any)?.subTopicCounts?.[topic];
+                const countLabel =
+                  stCounts
+                    ? questionType === "Ranking"
+                      ? stCounts.ranking
+                      : questionType === "Select - 3"
+                      ? stCounts.select3
+                      : stCounts.total
+                    : null;
+
+                return (
+                  <div
+                    key={topic}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleTopic(topic)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleTopic(topic);
+                      }
+                    }}
+                    className="flex items-center gap-3 cursor-pointer select-none group"
                   >
-                    {topic}
-                  </span>
-                </label>
-              );
-            })}
+                    <div
+                      className={`w-4 h-4 rounded-[4px] flex items-center justify-center transition-all shrink-0 ${
+                        isChecked
+                          ? "bg-[#1D82EB] text-white"
+                          : "border border-slate-300 bg-white group-hover:border-slate-400"
+                      }`}
+                    >
+                      {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                    <div className="flex-1 flex items-center justify-between gap-2">
+                      <span
+                        className={`text-xs sm:text-[13.5px] font-medium transition-colors ${
+                          isChecked ? "text-[#141B25]" : "text-slate-500 group-hover:text-slate-700"
+                        }`}
+                      >
+                        {topic}
+                      </span>
+                      {countLabel !== null && (
+                        <span className="text-[11px] font-semibold text-slate-400 shrink-0">
+                          ({countLabel} Qs)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -456,31 +528,60 @@ export default function ProfessionalDilemmaDomainPage() {
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-[#141B25]">Session</h2>
 
-            {/* Previous Session Found Notice */}
-            <div className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-4 sm:p-5 space-y-2">
-              <div className="flex items-center gap-2 text-[#059669]">
-                <Info className="w-4 h-4 shrink-0 stroke-[2.5]" />
-                <span className="text-xs sm:text-[13px] font-bold">
-                  Previous session found
-                </span>
+            {/* Dynamic Session Notice */}
+            {hasUnfinishedSession && savedSession ? (
+              <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-xl p-4 sm:p-5 space-y-2 animate-in fade-in">
+                <div className="flex items-center gap-2 text-[#1D82EB]">
+                  <Clock className="w-4 h-4 shrink-0 stroke-[2.5]" />
+                  <span className="text-xs sm:text-[13px] font-bold">
+                    Previous Session In Progress
+                  </span>
+                </div>
+                <p className="text-xs sm:text-[13px] font-bold text-[#141B25] leading-snug">
+                  Question {savedSession.currentIndex + 1} of {savedSession.totalQuestions} · {savedSession.questionType}
+                </p>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  You stopped at question {savedSession.currentIndex + 1}. Click Resume Session to continue where you left off.
+                </p>
               </div>
-              <p className="text-xs sm:text-[13px] font-bold text-[#141B25] leading-snug tracking-wide uppercase">
-                {questionType === "Both" ? "RANKING · SELECT - 3" : questionType.toUpperCase()} ·{" "}
-                {topicMode === "all"
-                  ? "All Topics"
-                  : `${selectedTopics.length} Topics Selected`}
-              </p>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Continue where you left off.
-              </p>
-            </div>
+            ) : (
+              <div className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-4 sm:p-5 space-y-2">
+                <div className="flex items-center gap-2 text-[#059669]">
+                  <Info className="w-4 h-4 shrink-0 stroke-[2.5]" />
+                  <span className="text-xs sm:text-[13px] font-bold">
+                    Active Question Bank
+                  </span>
+                </div>
+                <p className="text-xs sm:text-[13px] font-bold text-[#141B25] leading-snug tracking-wide uppercase">
+                  {questionType === "Both" ? "RANKING · SELECT - 3" : questionType.toUpperCase()} ·{" "}
+                  {selectedTopics.length === availableTopics.length && availableTopics.length > 0
+                    ? "All Topics"
+                    : selectedTopics.length === 0
+                    ? "No Topics Selected"
+                    : `${selectedTopics.length} Topics Selected`}
+                </p>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {selectedTopics.length === 0
+                    ? "Select one or more topics above to begin practice."
+                    : `${totalQuestions} dynamic questions available in database.`}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Action CTA Buttons */}
           <div className="space-y-3 pt-4">
             <Link
-              href={`/practice/professional-dilemmas?${practiceQuery.toString()}&mode=resume`}
-              className="w-full py-3.5 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              href={
+                hasUnfinishedSession && savedSession
+                  ? `/practice/professional-dilemmas?${practiceQuery.toString()}&mode=resume`
+                  : "#"
+              }
+              className={`w-full py-3.5 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-blue-500/20 flex items-center justify-center gap-2 transition-all ${
+                hasUnfinishedSession
+                  ? "cursor-pointer opacity-100"
+                  : "opacity-40 pointer-events-none cursor-not-allowed"
+              }`}
             >
               <span>Resume Session</span>
               <Play className="w-3.5 h-3.5 fill-none stroke-current stroke-[2.5]" />
@@ -488,7 +589,11 @@ export default function ProfessionalDilemmaDomainPage() {
 
             <Link
               href={`/practice/professional-dilemmas?${practiceQuery.toString()}&mode=new`}
-              className="w-full py-3.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-orange-500/20 flex items-center justify-center transition-all cursor-pointer"
+              className={`w-full py-3.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-orange-500/20 flex items-center justify-center transition-all ${
+                selectedTopics.length === 0
+                  ? "opacity-40 pointer-events-none cursor-not-allowed"
+                  : "cursor-pointer"
+              }`}
             >
               <span>Start New Session</span>
             </Link>

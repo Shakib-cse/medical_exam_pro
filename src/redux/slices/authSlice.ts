@@ -41,6 +41,13 @@ const authSlice = createSlice({
         const token = localStorage.getItem("auth_token");
         if (token) {
           state.token = token;
+          const userStr = localStorage.getItem("auth_user");
+          if (userStr) {
+            try {
+              state.user = JSON.parse(userStr);
+              state.isAuthenticated = true;
+            } catch {}
+          }
         }
       }
     },
@@ -54,7 +61,10 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       if (typeof window !== "undefined") {
         localStorage.setItem("auth_token", token);
+        localStorage.setItem("auth_user", JSON.stringify(user));
         document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("practice_session_update"));
       }
     },
     logout: (state) => {
@@ -63,7 +73,10 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       if (typeof window !== "undefined") {
         localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
         document.cookie = "auth_token=; path=/; max-age=0;";
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("practice_session_update"));
       }
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -71,6 +84,10 @@ const authSlice = createSlice({
     },
     updateUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_user", JSON.stringify(action.payload));
+        window.dispatchEvent(new Event("storage"));
+      }
     },
   },
   extraReducers: (builder) => {
@@ -82,6 +99,11 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isLoading = false;
+        if (typeof window !== "undefined" && action.payload) {
+          localStorage.setItem("auth_user", JSON.stringify(action.payload));
+          window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("practice_session_update"));
+        }
       })
       .addCase(fetchCurrentUser.rejected, (state) => {
         state.user = null;
@@ -90,7 +112,10 @@ const authSlice = createSlice({
         state.isLoading = false;
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth_token");
+          localStorage.removeItem("auth_user");
           document.cookie = "auth_token=; path=/; max-age=0;";
+          window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("practice_session_update"));
         }
       });
   },

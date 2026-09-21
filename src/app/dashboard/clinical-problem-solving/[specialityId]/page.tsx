@@ -12,12 +12,16 @@ import {
   Loader2,
 } from "lucide-react";
 import { questionBankApi, QuestionBankItemData } from "@/services/questionBankApi";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import {
   getSavedCPSSession,
   getSpecialtyStats,
   CPSSavedSession,
   CPSSpecialtyStats,
   formatAverageTime,
+  getCurrentUserId,
+  CPS_SPECIALTIES_CONFIG,
 } from "@/lib/practiceSession";
 
 interface SpecialtyMeta {
@@ -158,7 +162,12 @@ export default function SpecialtyPracticeSettingsPage() {
   const availableTopics = dynamicBank?.subTopics || [];
   const currentTitle = dynamicBank?.title || defaultMeta.title;
   const currentSubtitle = dynamicBank?.description || defaultMeta.subtitle;
-  const currentTotalQ = dynamicBank?.questionCount || 0;
+  const specConfig = CPS_SPECIALTIES_CONFIG.find(
+    (c) => c.id === rawId || c.title.toLowerCase() === currentTitle.toLowerCase()
+  );
+  const currentSbaCount = (dynamicBank as any)?.sbaCount ?? specConfig?.sbaCount ?? 0;
+  const currentEmqCount = (dynamicBank as any)?.emqCount ?? specConfig?.emqCount ?? 0;
+  const currentTotalQ = dynamicBank?.questionCount || specConfig?.totalQ || (currentSbaCount + currentEmqCount) || 0;
 
   // Fetch dynamic question bank and subtopics from database whenever rawId changes
   useEffect(() => {
@@ -197,14 +206,17 @@ export default function SpecialtyPracticeSettingsPage() {
   }, [rawId]);
 
   // Check for unfinished session on mount and when rawId/currentTitle changes
+  const user = useSelector((state: RootState) => state.auth.user);
+  const activeUserId = user?.id || getCurrentUserId();
+
   useEffect(() => {
-    const session = getSavedCPSSession(rawId) || getSavedCPSSession(currentTitle);
+    const session = getSavedCPSSession(rawId, activeUserId) || getSavedCPSSession(currentTitle, activeUserId);
     if (session && !session.isCompleted && session.totalQuestions > 0) {
       setSavedSession(session);
     } else {
       setSavedSession(null);
     }
-  }, [rawId, currentTitle]);
+  }, [rawId, currentTitle, activeUserId]);
 
   const hasUnfinishedSession = Boolean(
     savedSession && !savedSession.isCompleted && savedSession.totalQuestions > 0
@@ -225,8 +237,8 @@ export default function SpecialtyPracticeSettingsPage() {
     if (!dynamicBank) return;
 
     // 1. Get client-side saved/live session stats (by slug or title)
-    const statsBySlug = getSpecialtyStats(rawId, currentTotalQ);
-    const statsByTitle = getSpecialtyStats(currentTitle, currentTotalQ);
+    const statsBySlug = getSpecialtyStats(rawId, currentTotalQ, activeUserId);
+    const statsByTitle = getSpecialtyStats(currentTitle, currentTotalQ, activeUserId);
     let chosen = statsBySlug.attempted >= statsByTitle.attempted ? statsBySlug : statsByTitle;
 
     // 2. Check if backend database attempts have more data
@@ -485,20 +497,30 @@ export default function SpecialtyPracticeSettingsPage() {
           <div className="flex items-center justify-between py-1">
             <span className="text-sm font-medium text-slate-700">Question Type</span>
             <div className="flex items-center gap-2">
-              {(["SBA", "EMQ", "Both"] as const).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setQuestionType(type)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    questionType === type
-                      ? "bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0] shadow-2xs"
-                      : "bg-[#f8fafc] text-slate-600 border border-slate-200/80 hover:bg-slate-100"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
+              {(["SBA", "EMQ", "Both"] as const).map((type) => {
+                const countBadge =
+                  type === "SBA" && currentSbaCount > 0
+                    ? ` (${currentSbaCount})`
+                    : type === "EMQ" && currentEmqCount > 0
+                    ? ` (${currentEmqCount})`
+                    : type === "Both" && currentTotalQ > 0
+                    ? ` (${currentTotalQ})`
+                    : "";
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setQuestionType(type)}
+                    className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      questionType === type
+                        ? "bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0] shadow-2xs"
+                        : "bg-[#f8fafc] text-slate-600 border border-slate-200/80 hover:bg-slate-100"
+                    }`}
+                  >
+                    {type}{countBadge}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

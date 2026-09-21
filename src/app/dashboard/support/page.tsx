@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import { Send, CheckCircle2, LifeBuoy, Mail, MessageSquare } from "lucide-react";
+import { Send, CheckCircle2, LifeBuoy, Mail, MessageSquare, AlertCircle } from "lucide-react";
 
 export default function SupportPage() {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -13,17 +13,43 @@ export default function SupportPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject || !email || !description) return;
+    if (!subject.trim() || !email.trim() || !description.trim()) return;
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("http://localhost:3030/api/v1/overview/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: subject.trim(),
+          email: email.trim(),
+          description: description.trim(),
+          userId: user?.id || "",
+          userName:
+            user?.displayName ||
+            (user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : "Candidate"),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to send support message");
+      }
+
       setSubmitted(true);
       setSubject("");
       setDescription("");
-    }, 1000);
+    } catch (err: any) {
+      console.error("Support submit error:", err);
+      setErrorMessage("Could not send message to server. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -60,6 +86,13 @@ export default function SupportPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
+            {errorMessage && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Subject */}
               <div className="space-y-1.5">

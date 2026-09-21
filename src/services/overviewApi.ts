@@ -23,9 +23,14 @@ export interface ClinicalTopicData {
 }
 
 export interface DilemmaCardData {
+  id?: string;
   title: string;
   subtitle: string;
   image: string;
+  totalQ?: number;
+  rankingCount?: number;
+  select3Count?: number;
+  topics?: string[];
 }
 
 export interface DailyGoalData {

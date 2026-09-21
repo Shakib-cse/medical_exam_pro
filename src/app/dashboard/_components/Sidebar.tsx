@@ -124,22 +124,25 @@ export function Sidebar({ className }: SidebarProps) {
                 <Link
                   key={item.label}
                   href={item.href}
+                  prefetch={true}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-[13.5px] transition-all duration-150",
+                    "flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13.5px] transition-all duration-150",
                     isActive
                       ? "bg-[#144372] text-white font-semibold shadow-xs"
                       : "text-[#97afc7] hover:text-white hover:bg-white/[0.04] font-medium"
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      "w-4.5 h-4.5 shrink-0 transition-colors",
-                      isActive ? "text-white" : "text-[#829bb5]"
-                    )}
-                    strokeWidth={1.8}
-                  />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3.5">
+                    <Icon
+                      className={cn(
+                        "w-4.5 h-4.5 shrink-0 transition-colors",
+                        isActive ? "text-white" : "text-[#829bb5]"
+                      )}
+                      strokeWidth={1.8}
+                    />
+                    <span>{item.label}</span>
+                  </div>
                 </Link>
               );
             })}
@@ -156,6 +159,7 @@ export function Sidebar({ className }: SidebarProps) {
               <Link
                 key={item.label}
                 href={item.href}
+                prefetch={true}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-[13.5px] transition-all duration-150",

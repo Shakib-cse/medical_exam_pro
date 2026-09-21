@@ -7,13 +7,15 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { ChevronRight, Loader2, HelpCircle } from "lucide-react";
 import { overviewApi } from "@/services/overviewApi";
-import { getSpecialtyStats } from "@/lib/practiceSession";
+import { getSpecialtyStats, CPS_SPECIALTIES_CONFIG } from "@/lib/practiceSession";
 
 interface Topic {
   id: string;
   title: string;
   image: string;
   totalQ: number;
+  sbaCount?: number;
+  emqCount?: number;
   correct: number;
   wrong: number;
   attemptsPct: number;
@@ -32,9 +34,14 @@ function formatTitle(str: string): string {
 
 function parseTopicItem(t: any, userId?: string): Topic {
   const topicId = t.id || t.title?.toLowerCase().replace(/\s+/g, "-") || `topic-${Math.random()}`;
+  const specConfig = CPS_SPECIALTIES_CONFIG.find(
+    (c) => c.id === topicId || c.title.toLowerCase() === (t.title || "").toLowerCase()
+  );
+  const sbaCount = t.sbaCount ?? specConfig?.sbaCount ?? 0;
+  const emqCount = t.emqCount ?? specConfig?.emqCount ?? 0;
   let correct = 0;
   let wrong = 0;
-  let totalQ = t.questions?.length || t.totalQ || 1;
+  let totalQ = t.totalQ || t.questions?.length || specConfig?.totalQ || (sbaCount + emqCount) || 1;
   let attemptsPct = 0;
   let accuracyPct = 0;
   let hasAttempted = false;
@@ -44,8 +51,8 @@ function parseTopicItem(t: any, userId?: string): Topic {
     const savedAttemptStr =
       (userPrefix ? localStorage.getItem(`${userPrefix}topic_last_attempt_${topicId}`) : null) ||
       (userPrefix ? localStorage.getItem(`${userPrefix}topic_last_attempt_${t.title}`) : null) ||
-      (!userPrefix ? localStorage.getItem(`topic_last_attempt_${topicId}`) : null) ||
-      (!userPrefix ? localStorage.getItem(`topic_last_attempt_${t.title}`) : null);
+      (!userId ? localStorage.getItem(`topic_last_attempt_${topicId}`) : null) ||
+      (!userId ? localStorage.getItem(`topic_last_attempt_${t.title}`) : null);
 
     if (savedAttemptStr) {
       try {
@@ -61,8 +68,8 @@ function parseTopicItem(t: any, userId?: string): Topic {
       }
     }
 
-    // Also cross-reference cumulative CPS session stats
-    const cpsStats = getSpecialtyStats(t.title || topicId, totalQ);
+    // Also cross-reference cumulative CPS session stats for this specific user
+    const cpsStats = getSpecialtyStats(t.title || topicId, totalQ, userId);
     if (cpsStats.attempted > 0) {
       correct = Math.max(correct, cpsStats.correct);
       wrong = Math.max(wrong, Math.max(0, cpsStats.attempted - cpsStats.correct));
@@ -77,6 +84,8 @@ function parseTopicItem(t: any, userId?: string): Topic {
     title: formatTitle(t.title),
     image: t.image,
     totalQ,
+    sbaCount,
+    emqCount,
     correct,
     wrong,
     attemptsPct,
@@ -107,12 +116,44 @@ export function ClinicalProblemSolving() {
       try {
         setLoading(true);
         const res = await overviewApi.getOverviewContent();
-        if (res?.data?.clinical_topics?.content && Array.isArray(res.data.clinical_topics.content)) {
+        if (res?.data?.clinical_topics?.content && Array.isArray(res.data.clinical_topics.content) && res.data.clinical_topics.content.length > 0) {
           const dynamicTopics: Topic[] = res.data.clinical_topics.content.map((t: any) => parseTopicItem(t, userId));
           setTopics(dynamicTopics);
+        } else {
+          // Fallback to CPS_SPECIALTIES_CONFIG containing all 18 topics with exact question counts
+          const fallbackTopics: Topic[] = CPS_SPECIALTIES_CONFIG.map((c) =>
+            parseTopicItem(
+              {
+                id: c.id,
+                title: c.title,
+                totalQ: c.totalQ,
+                sbaCount: c.sbaCount,
+                emqCount: c.emqCount,
+                image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=600&auto=format&fit=crop&q=80",
+                category: "all",
+              },
+              userId
+            )
+          );
+          setTopics(fallbackTopics);
         }
       } catch (err) {
         console.error("Failed to load clinical topics:", err);
+        const fallbackTopics: Topic[] = CPS_SPECIALTIES_CONFIG.map((c) =>
+          parseTopicItem(
+            {
+              id: c.id,
+              title: c.title,
+              totalQ: c.totalQ,
+              sbaCount: c.sbaCount,
+              emqCount: c.emqCount,
+              image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=600&auto=format&fit=crop&q=80",
+              category: "all",
+            },
+            userId
+          )
+        );
+        setTopics(fallbackTopics);
       } finally {
         setLoading(false);
       }
@@ -234,11 +275,20 @@ export function ClinicalProblemSolving() {
                   />
                 </div>
 
-                {/* Title */}
-                <div className="pt-1 pb-2 border-b border-slate-100 min-h-[46px] flex items-center">
+                {/* Title & Subcategory Badges */}
+                <div className="pt-1 pb-2 border-b border-slate-100 flex flex-col justify-center gap-1 min-h-[52px]">
                   <h4 className="font-bold text-[#1c2833] text-sm sm:text-base leading-snug truncate">
                     {topic.title}
                   </h4>
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
+                      {topic.sbaCount ? `${topic.sbaCount} SBA` : "SBA"}
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 font-bold">
+                      {topic.emqCount ? `${topic.emqCount} EMQ Cases` : "EMQ"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Responsive Metrics Table with Last Test Data */}
