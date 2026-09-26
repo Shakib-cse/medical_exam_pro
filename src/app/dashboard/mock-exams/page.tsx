@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Info, Trophy, Calendar } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { mockExamApi } from "@/services/mockExamApi";
+import { getCurrentUserId, getUserPrefix } from "@/lib/practiceSession";
 
 interface MockCardItem {
   id: string;
@@ -28,6 +31,7 @@ const cleanInitialMocks: MockCardItem[] = Array.from({ length: 10 }, (_, i) => (
 }));
 
 export default function MockExamsPage() {
+  const user = useSelector((state: RootState) => state.auth.user);
   const [mockList, setMockList] = useState<MockCardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -36,25 +40,26 @@ export default function MockExamsPage() {
 
     async function loadData() {
       try {
+        const activeUid = user?.id || getCurrentUserId();
+        const userPrefix = getUserPrefix(activeUid);
+
         const res = await mockExamApi.getMockExams();
         if (!isMounted) return;
 
         if (res?.data && res.data.length > 0) {
           const mapped: MockCardItem[] = res.data.map((item, idx) => {
+            // Backend attempt is strictly for this user (backend filters by req.user.id)
             const hasBackendAttempt = !item.notAttempted && Boolean(item.bestScore);
             let localCompleted: any = null;
-            if (typeof window !== "undefined") {
+
+            // ONLY check keys that belong strictly to this specific active user:
+            if (typeof window !== "undefined" && activeUid) {
               try {
-                for (let i = 0; i < localStorage.length; i++) {
-                  const key = localStorage.key(i);
-                  if (
-                    key &&
-                    (key.endsWith(`mock_completed_${item.id}`) ||
-                      key.endsWith(`mock_completed_${item.examNumber}`))
-                  ) {
-                    const raw = localStorage.getItem(key);
-                    if (raw) localCompleted = JSON.parse(raw);
-                  }
+                const key1 = `${userPrefix}mock_completed_${item.id}`;
+                const key2 = `${userPrefix}mock_completed_${item.examNumber}`;
+                const raw = localStorage.getItem(key1) || localStorage.getItem(key2);
+                if (raw) {
+                  localCompleted = JSON.parse(raw);
                 }
               } catch {}
             }
@@ -115,7 +120,8 @@ export default function MockExamsPage() {
       window.removeEventListener("mock_session_update", loadData);
       window.removeEventListener("practice_session_update", loadData);
     };
-  }, []);
+  }, [user?.id]);
+
 
   const completedCount = mockList.filter((m) => m.isCompleted).length;
   const totalCount = mockList.length || 10;

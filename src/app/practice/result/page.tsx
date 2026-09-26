@@ -26,35 +26,12 @@ function MockResultContent() {
         const userPrefix = getUserPrefix(activeUid);
 
         let localResult: any = null;
-        if (typeof window !== "undefined") {
+        if (typeof window !== "undefined" && activeUid) {
           try {
-            // Check direct user key
             const directKey = `${userPrefix}mock_completed_${mockId}`;
             const rawDirect = localStorage.getItem(directKey);
             if (rawDirect) {
               localResult = JSON.parse(rawDirect);
-            } else {
-              // Iterate through localStorage to find matching completed mock
-              for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (
-                  k &&
-                  (k.endsWith(`mock_completed_${mockId}`) ||
-                    (mockId && k.includes(`mock_completed_`)))
-                ) {
-                  const raw = localStorage.getItem(k);
-                  if (raw) {
-                    const parsed = JSON.parse(raw);
-                    if (
-                      parsed.mockId === mockId ||
-                      k.endsWith(`mock_completed_${mockId}`)
-                    ) {
-                      localResult = parsed;
-                      break;
-                    }
-                  }
-                }
-              }
             }
           } catch (e) {
             console.warn("Could not read local mock completion data:", e);
