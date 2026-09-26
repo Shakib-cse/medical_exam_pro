@@ -915,23 +915,24 @@ export function getAggregatePracticeStats(userId?: string | null): AggregatePrac
   const totalQuestions = TOTAL_OVERALL_QUESTIONS;
   const unattempted = Math.max(0, totalQuestions - attempted);
 
-  // 3. Read user-scoped flagged questions count (CPS + PD)
+  // 3. Read user-scoped flagged questions count (CPS + PD + Mock)
   const flaggedItems = getFlaggedQuestions(userId);
   let flagged = flaggedItems.length;
 
-  // Also verify against active session flagged counts for this user only (both CPS and PD sessions)
+  // Also verify against active session flagged counts for this user only (CPS, PD, and Mock sessions)
   try {
     const cpsPrefix = `${userPrefix}cps_session_`;
     const pdPrefix = `${userPrefix}pd_session_`;
+    const mockPrefix = `${userPrefix}mock_session_`;
     const seenSpecialties = new Set<string>();
     let sessionFlaggedCount = 0;
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith(cpsPrefix) || key.startsWith(pdPrefix))) {
+      if (key && (key.startsWith(cpsPrefix) || key.startsWith(pdPrefix) || key.startsWith(mockPrefix))) {
         const raw = localStorage.getItem(key);
         if (raw) {
           const parsed = JSON.parse(raw);
-          const specId = parsed.speciality || parsed.specialitySlug || parsed.domain || parsed.domainSlug || key;
+          const specId = parsed.speciality || parsed.specialitySlug || parsed.domain || parsed.domainSlug || parsed.mockId || key;
           if (!seenSpecialties.has(specId)) {
             seenSpecialties.add(specId);
             if (parsed.flagged && typeof parsed.flagged === "object") {
@@ -1449,5 +1450,88 @@ export function clearPDSession(domainSlugOrName: string, userId?: string | null)
     }
   } catch (err) {
     console.error("Error clearing PD session:", err);
+  }
+}
+
+// ==========================================
+// MOCK EXAM SESSIONS & STATS
+// ==========================================
+
+export interface MockSavedSession {
+  mockId: string;
+  mockTitle: string;
+  currentIndex: number;
+  totalQuestions: number;
+  userAnswers: Record<string, any>;
+  flagged: Record<string, boolean>;
+  isBreakActive: boolean;
+  breakSecondsLeft: number;
+  examSecondsLeft: number;
+  isCompleted: boolean;
+  score?: number;
+  lastUpdated: number;
+}
+
+export function getMockSession(mockId: string, userId?: string | null): MockSavedSession | null {
+  if (typeof window === "undefined" || !mockId) return null;
+  try {
+    const userPrefix = getUserPrefix(userId);
+    const raw = localStorage.getItem(`${userPrefix}mock_session_${mockId}`);
+    if (raw) return JSON.parse(raw);
+  } catch (err) {
+    console.error("Error reading saved mock session:", err);
+  }
+  return null;
+}
+
+export function saveMockSession(session: MockSavedSession, userId?: string | null): void {
+  if (typeof window === "undefined" || !session.mockId) return;
+  try {
+    const userPrefix = getUserPrefix(userId);
+    const sessionJson = JSON.stringify(session);
+    localStorage.setItem(`${userPrefix}mock_session_${session.mockId}`, sessionJson);
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("mock_session_update"));
+    window.dispatchEvent(new CustomEvent("practice_session_update"));
+  } catch (err) {
+    console.error("Error saving mock session:", err);
+  }
+}
+
+export function clearMockSession(mockId: string, userId?: string | null): void {
+  if (typeof window === "undefined" || !mockId) return;
+  try {
+    const userPrefix = getUserPrefix(userId);
+    localStorage.removeItem(`${userPrefix}mock_session_${mockId}`);
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("mock_session_update"));
+    window.dispatchEvent(new CustomEvent("practice_session_update"));
+  } catch (err) {
+    console.error("Error clearing mock session:", err);
+  }
+}
+
+export function markMockSessionCompleted(
+  mockId: string,
+  score: number,
+  userId?: string | null
+): void {
+  if (typeof window === "undefined" || !mockId) return;
+  try {
+    const userPrefix = getUserPrefix(userId);
+    const key = `${userPrefix}mock_completed_${mockId}`;
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        mockId,
+        score,
+        completedAt: new Date().toISOString(),
+      })
+    );
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("mock_session_update"));
+    window.dispatchEvent(new CustomEvent("practice_session_update"));
+  } catch (err) {
+    console.error("Error marking mock session completed:", err);
   }
 }

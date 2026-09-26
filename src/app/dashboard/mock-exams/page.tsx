@@ -37,23 +37,71 @@ export default function MockExamsPage() {
       try {
         const res = await mockExamApi.getMockExams();
         if (res?.data && res.data.length > 0) {
-          const mapped: MockCardItem[] = res.data.map((item, idx) => ({
-            id: item.id,
-            mockNumber: idx + 1,
-            title: item.title || `Mock Exam ${idx + 1}`,
-            isCompleted: !item.notAttempted && Boolean(item.bestScore),
-            score: item.bestScore ? parseInt(item.bestScore) || 70 : 0,
-            dateTaken: item.notAttempted ? "Not attempted yet" : "12 Aug, 2026",
-            duration: item.duration,
-            questions: item.questions,
-          }));
+          const hasAnyUserAttempt = res.data.some((item) => !item.notAttempted && Boolean(item.bestScore));
+
+          const mapped: MockCardItem[] = res.data.map((item, idx) => {
+            const hasBackendAttempt = !item.notAttempted && Boolean(item.bestScore);
+            let localCompleted: any = null;
+            if (typeof window !== "undefined") {
+              try {
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && (key.endsWith(`mock_completed_${item.id}`) || key.endsWith(`mock_completed_${item.examNumber}`))) {
+                    const raw = localStorage.getItem(key);
+                    if (raw) localCompleted = JSON.parse(raw);
+                  }
+                }
+              } catch {}
+            }
+
+            const isComp = hasBackendAttempt || Boolean(localCompleted);
+            const scoreVal = hasBackendAttempt
+              ? (parseInt(item.bestScore || "0") || 0)
+              : (localCompleted?.score ?? 0);
+
+            const dateVal = hasBackendAttempt
+              ? (item.dateTaken || "12 Aug, 2026")
+              : localCompleted?.completedAt
+              ? new Date(localCompleted.completedAt).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : "Not attempted yet";
+
+            const fallback = defaultMockList[idx];
+
+            return {
+              id: item.id,
+              mockNumber: item.examNumber || idx + 1,
+              title: item.title || `Mock Exam ${idx + 1}`,
+              isCompleted: hasAnyUserAttempt ? isComp : (fallback?.isCompleted ?? false),
+              score: hasAnyUserAttempt ? (isComp ? scoreVal : 0) : (fallback?.score || 0),
+              dateTaken: hasAnyUserAttempt ? (isComp ? dateVal : "Not attempted yet") : (fallback?.dateTaken || "Not attempted yet"),
+              duration: item.duration,
+              questions: item.questions,
+            };
+          });
           setMockList(mapped);
         }
       } catch (err) {
         console.warn("Using fallback mock exams list:", err);
       }
     }
+
     loadData();
+
+    window.addEventListener("storage", loadData);
+    window.addEventListener("focus", loadData);
+    window.addEventListener("mock_session_update", loadData);
+    window.addEventListener("practice_session_update", loadData);
+
+    return () => {
+      window.removeEventListener("storage", loadData);
+      window.removeEventListener("focus", loadData);
+      window.removeEventListener("mock_session_update", loadData);
+      window.removeEventListener("practice_session_update", loadData);
+    };
   }, []);
 
   const completedCount = mockList.filter((m) => m.isCompleted).length;
