@@ -88,23 +88,12 @@ function MockExamPracticeContent() {
           const totalDuration = (res.data.durationMinutes || 120) * 60;
           setExamSecondsLeft(totalDuration);
 
-          // Initialize default answers
-          const initialAnswers: Record<string, any> = {};
-          sorted.forEach((q) => {
-            if (q.questionType === "RANKING") {
-              const optKeys = ["A", "B", "C", "D", "E"];
-              initialAnswers[q.id] = optKeys;
-            }
-          });
-
-          // 1. Sync previously flagged questions dynamically from global storage
+          // 1. Sync previously flagged questions strictly for this mock question
           const activeUid = getCurrentUserId();
           const globalFlagged = getFlaggedQuestions(activeUid);
           const initialFlagged: Record<string, boolean> = {};
           sorted.forEach((q) => {
-            const isFl = globalFlagged.some(
-              (f) => f.id === String(q.id) || (f.prompt && q.vignette && f.prompt === q.vignette)
-            );
+            const isFl = globalFlagged.some((f) => f.id === String(q.id));
             if (isFl) {
               initialFlagged[q.id] = true;
             }
@@ -113,12 +102,22 @@ function MockExamPracticeContent() {
           // 2. Check for active saved session unless explicit retake
           if (modeParam === "retake") {
             clearMockSession(mockIdParam, activeUid);
-            setUserAnswers(initialAnswers);
+            setUserAnswers({});
             setFlagged(initialFlagged);
           } else {
             const saved = getMockSession(mockIdParam, activeUid);
             if (saved && !saved.isCompleted) {
-              setUserAnswers(saved.userAnswers || initialAnswers);
+              const restoredAnswers: Record<string, any> = { ...(saved.userAnswers || {}) };
+              const cpsCount = sorted.filter((q) => q.section === "CPS").length;
+              // Clean out any stale auto-generated default ranking answers from older sessions
+              if ((saved.currentIndex || 0) < cpsCount) {
+                sorted.forEach((q) => {
+                  if (q.questionType === "RANKING") {
+                    delete restoredAnswers[q.id];
+                  }
+                });
+              }
+              setUserAnswers(restoredAnswers);
               setFlagged({ ...initialFlagged, ...(saved.flagged || {}) });
               setCurrentIndex(saved.currentIndex || 0);
               setIsBreakActive(saved.isBreakActive || false);
@@ -129,11 +128,12 @@ function MockExamPracticeContent() {
                 setExamSecondsLeft(saved.examSecondsLeft);
               }
             } else {
-              setUserAnswers(initialAnswers);
+              setUserAnswers({});
               setFlagged(initialFlagged);
             }
           }
         }
+
 
         // Try start attempt on backend if authenticated
         try {
@@ -370,6 +370,14 @@ function MockExamPracticeContent() {
 
   // Navigation Logic
   const handleNext = () => {
+    // If candidate is on a RANKING question and clicks Submit Answer without reordering, record the current order
+    if (currentQ?.questionType === "RANKING" && !userAnswers[currentQ.id]) {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [currentQ.id]: ["A", "B", "C", "D", "E"],
+      }));
+    }
+
     // If on the last question of CPS, transition to 5-minute break screen!
     if (currentIndex === lastCpsIndex && !isBreakActive) {
       setIsBreakActive(true);
@@ -381,6 +389,7 @@ function MockExamPracticeContent() {
       setShowEndSessionModal(true);
     }
   };
+
 
   const handlePrevious = () => {
     if (isBreakActive) {
@@ -472,10 +481,23 @@ function MockExamPracticeContent() {
   });
 
   const overallAccuracy = Math.round((totalEarned / (totalPossible || 1)) * 100);
-  const answeredCount = Object.keys(userAnswers).filter((k) => {
-    const val = userAnswers[k];
-    return Array.isArray(val) ? val.length > 0 : Boolean(val);
+  const answeredCount = questions.filter((q) => {
+    if (q.questionType === "SBA") {
+      return Boolean(userAnswers[q.id]);
+    } else if (q.questionType === "EMQ") {
+      const cases = q.cases || [];
+      return cases.length > 0
+        ? cases.some((c) => Boolean(userAnswers[`${q.id}_case_${c.id || c.caseNumber}`]))
+        : Boolean(userAnswers[q.id]);
+    } else if (q.questionType === "SELECT_3") {
+      const sel = userAnswers[q.id];
+      return Array.isArray(sel) && sel.length > 0;
+    } else if (q.questionType === "RANKING") {
+      return Boolean(userAnswers[q.id]);
+    }
+    return false;
   }).length;
+
 
   // Format Helper
   const formatTimer = (seconds: number) => {
