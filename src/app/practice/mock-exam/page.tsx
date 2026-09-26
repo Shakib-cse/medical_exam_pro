@@ -403,8 +403,16 @@ function MockExamPracticeContent() {
     setShowEndSessionModal(false);
     setExamSubmitted(true);
 
+    const totalCount = totalPossible || questions.length || 115;
+    const correctCount = Math.round(totalEarned);
+    const incorrectCount = Math.max(0, totalCount - correctCount);
+
     const activeUid = getCurrentUserId();
-    markMockSessionCompleted(mockIdParam, overallAccuracy, activeUid);
+    markMockSessionCompleted(mockIdParam, overallAccuracy, activeUid, {
+      totalQuestions: totalCount,
+      correct: correctCount,
+      incorrect: incorrectCount,
+    });
     clearMockSession(mockIdParam, activeUid);
 
     if (attemptId) {
@@ -482,12 +490,18 @@ function MockExamPracticeContent() {
     const elapsedSec = Math.max(0, (examDetail?.durationMinutes || 120) * 60 - examSecondsLeft);
     const avgSec = answeredCount > 0 ? Math.round(elapsedSec / answeredCount) : 0;
     const averageTimeString = formatAverageTime(avgSec);
+    const totalCount = totalPossible || questions.length || 115;
+    const correctCount = Math.round(totalEarned);
+    const incorrectCount = Math.max(0, totalCount - correctCount);
 
     return (
       <ExamResultView
         specialtyOrTitle={examDetail?.title || "MSRA Mock Exam"}
         overallAccuracy={overallAccuracy}
         questionsAttempted={answeredCount}
+        totalQuestions={totalCount}
+        correctCount={correctCount}
+        incorrectCount={incorrectCount}
         averageTime={averageTimeString}
         returnUrl="/dashboard/mock-exams"
         onRetake={() => {

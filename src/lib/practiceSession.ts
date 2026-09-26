@@ -1514,7 +1514,8 @@ export function clearMockSession(mockId: string, userId?: string | null): void {
 export function markMockSessionCompleted(
   mockId: string,
   score: number,
-  userId?: string | null
+  userId?: string | null,
+  details?: { totalQuestions?: number; correct?: number; incorrect?: number }
 ): void {
   if (typeof window === "undefined" || !mockId) return;
   try {
@@ -1525,6 +1526,9 @@ export function markMockSessionCompleted(
       JSON.stringify({
         mockId,
         score,
+        totalQuestions: details?.totalQuestions,
+        correct: details?.correct,
+        incorrect: details?.incorrect,
         completedAt: new Date().toISOString(),
       })
     );
@@ -1535,3 +1539,4 @@ export function markMockSessionCompleted(
     console.error("Error marking mock session completed:", err);
   }
 }
+

@@ -7,8 +7,11 @@ import { Check, Undo2 } from "lucide-react";
 export interface ExamResultViewProps {
   specialtyOrTitle: string;
   overallAccuracy: number;
-  questionsAttempted: number;
-  averageTime: string;
+  questionsAttempted?: number;
+  averageTime?: string;
+  totalQuestions?: number;
+  correctCount?: number;
+  incorrectCount?: number;
   returnUrl?: string;
   onRetake?: () => void;
   examType?: "CPS" | "Mock" | "PD";
@@ -17,17 +20,16 @@ export interface ExamResultViewProps {
 export function ExamResultView({
   specialtyOrTitle,
   overallAccuracy,
-  questionsAttempted,
-  averageTime,
+  questionsAttempted = 0,
+  averageTime = "0s",
+  totalQuestions,
+  correctCount,
+  incorrectCount,
   returnUrl = "/dashboard/clinical-problem-solving",
   onRetake,
   examType = "CPS",
 }: ExamResultViewProps) {
   // Derive clean names for display matching user's exact specification:
-  // e.g. "Cardiovascular Medicine" ->
-  //   shortSpecialtyName = "Cardiovascular"
-  //   fullSpecialtyName = "Cardiovascular Medicine"
-  //   topBarTitle = "Cardiovascular Result"
   const cleanParam = (specialtyOrTitle || "Clinical Problem Solving").trim();
   const shortSpecialtyName = cleanParam.replace(/\s+(Medicine|Focus|Practice)$/i, "");
   const fullSpecialtyName = cleanParam.toLowerCase().includes("medicine")
@@ -36,21 +38,21 @@ export function ExamResultView({
 
   const topBarTitle =
     examType === "Mock"
-      ? "Mock Exam Result"
+      ? "Mock Result"
       : examType === "PD"
       ? "Professional Dilemmas Result"
       : `${shortSpecialtyName} Result`;
 
   const headingTitle =
     examType === "Mock"
-      ? "Mock Examination Completed"
+      ? "Mock Exam Completed"
       : examType === "PD"
       ? `${cleanParam} Completed`
       : `${fullSpecialtyName} Completed`;
 
   const motivationalSubject =
     examType === "Mock"
-      ? "timed Mock Exam"
+      ? "mock exam"
       : examType === "PD"
       ? "ethical scenario set"
       : shortSpecialtyName;
@@ -65,10 +67,17 @@ export function ExamResultView({
   // Inner solid blue disc radius (leaving a clean 10px white gap/padding between inner disc and outer ring)
   const innerDiscRadius = 72;
 
+  // Resolved metrics for Mock
+  const resolvedTotal = totalQuestions ?? (questionsAttempted > 0 ? questionsAttempted : 115);
+  const resolvedCorrect =
+    correctCount ?? Math.round((resolvedTotal * clampedAccuracy) / 100);
+  const resolvedIncorrect =
+    incorrectCount ?? Math.max(0, resolvedTotal - resolvedCorrect);
+
   return (
     <div className="min-h-screen bg-white text-slate-800 flex flex-col font-sans">
       {/* 1. TOP NAV BAR (Dark Navy matching screenshot) */}
-      <header className="w-full bg-[#082138] px-6 sm:px-10 py-3 flex items-center justify-between border-b border-[#0f2e4c]">
+      <header className="w-full bg-[#0F172A] px-6 sm:px-10 py-3.5 flex items-center justify-between border-b border-[#1E293B]">
         <div className="text-white text-xs sm:text-sm font-semibold tracking-wide">
           {topBarTitle}
         </div>
@@ -93,7 +102,7 @@ export function ExamResultView({
           Great work! Your results are ready to review.
         </p>
 
-        {/* Donut Accuracy Meter with inner blue disc and white padding ring */}
+        {/* Donut Accuracy/Score Meter with inner blue disc and white padding ring */}
         <div className="relative w-48 h-48 sm:w-52 sm:h-52 my-7 sm:my-8 flex items-center justify-center">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
             {/* Background Outer Ring Track */}
@@ -135,31 +144,62 @@ export function ExamResultView({
               {clampedAccuracy}%
             </span>
             <span className="text-[11px] sm:text-xs font-medium text-white/95 mt-1 tracking-normal">
-              Overall Accuracy
+              {examType === "Mock" ? "Overall Score" : "Overall Accuracy"}
             </span>
           </div>
         </div>
 
-        {/* Metric Cards (Questions Attempted & Average Time) with generous internal padding */}
-        <div className="grid grid-cols-2 gap-4 sm:gap-5 w-full max-w-[430px] mb-6">
-          <div className="bg-white rounded-2xl border border-slate-200/90 py-5 sm:py-6 px-4 sm:px-6 text-center shadow-xs flex flex-col items-center justify-center min-h-[96px]">
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#0B1E34] tracking-tight">
-              {questionsAttempted}
+        {/* Metric Cards */}
+        {examType === "Mock" ? (
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 w-full max-w-[450px] mb-6">
+            <div className="bg-white rounded-2xl border border-slate-200/90 py-4 sm:py-5 px-3 sm:px-4 text-center shadow-xs flex flex-col items-center justify-center min-h-[90px]">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0B1E34] tracking-tight">
+                {resolvedTotal}
+              </div>
+              <div className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1.5">
+                Total Questions
+              </div>
             </div>
-            <div className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1.5">
-              Questions Attempted
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200/90 py-5 sm:py-6 px-4 sm:px-6 text-center shadow-xs flex flex-col items-center justify-center min-h-[96px]">
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#0B1E34] tracking-tight">
-              {averageTime || "0s"}
+            <div className="bg-white rounded-2xl border border-slate-200/90 py-4 sm:py-5 px-3 sm:px-4 text-center shadow-xs flex flex-col items-center justify-center min-h-[90px]">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0B1E34] tracking-tight">
+                {resolvedCorrect}
+              </div>
+              <div className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1.5">
+                Correct
+              </div>
             </div>
-            <div className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1.5">
-              Average Time
+
+            <div className="bg-white rounded-2xl border border-slate-200/90 py-4 sm:py-5 px-3 sm:px-4 text-center shadow-xs flex flex-col items-center justify-center min-h-[90px]">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0B1E34] tracking-tight">
+                {resolvedIncorrect}
+              </div>
+              <div className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1.5">
+                Incorrect
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 sm:gap-5 w-full max-w-[430px] mb-6">
+            <div className="bg-white rounded-2xl border border-slate-200/90 py-5 sm:py-6 px-4 sm:px-6 text-center shadow-xs flex flex-col items-center justify-center min-h-[96px]">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0B1E34] tracking-tight">
+                {questionsAttempted}
+              </div>
+              <div className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1.5">
+                Questions Attempted
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200/90 py-5 sm:py-6 px-4 sm:px-6 text-center shadow-xs flex flex-col items-center justify-center min-h-[96px]">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0B1E34] tracking-tight">
+                {averageTime || "0s"}
+              </div>
+              <div className="text-xs sm:text-[13px] text-slate-500 font-normal mt-1.5">
+                Average Time
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Motivational Feedback Text */}
         <p className="text-xs sm:text-[13px] text-slate-500 leading-relaxed max-w-md mx-auto text-center mb-7">
@@ -180,3 +220,4 @@ export function ExamResultView({
     </div>
   );
 }
+
