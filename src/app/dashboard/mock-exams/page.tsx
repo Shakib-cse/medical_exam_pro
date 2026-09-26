@@ -19,18 +19,6 @@ interface MockCardItem {
   questions?: number;
 }
 
-const cleanInitialMocks: MockCardItem[] = Array.from({ length: 10 }, (_, i) => ({
-  id: `mock-${i + 1}`,
-  mockNumber: i + 1,
-  title: `Mock Exam ${i + 1}`,
-  isCompleted: false,
-  score: 0,
-  dateTaken: "Not attempted yet",
-  duration: "120 mins",
-  questions: 147,
-}));
-
-
 export default function MockExamsPage() {
   const user = useSelector((state: RootState) => state.auth.user);
   const [mockList, setMockList] = useState<MockCardItem[]>([]);
@@ -93,12 +81,12 @@ export default function MockExamsPage() {
           });
           setMockList(mapped);
         } else {
-          setMockList(cleanInitialMocks);
+          setMockList([]);
         }
       } catch (err) {
-        console.warn("Could not fetch mock exams, using clean list:", err);
+        console.warn("Could not fetch mock exams:", err);
         if (isMounted) {
-          setMockList(cleanInitialMocks);
+          setMockList([]);
         }
       } finally {
         if (isMounted) {

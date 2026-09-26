@@ -14,7 +14,7 @@ function MockResultContent() {
   const [resultData, setResultData] = useState({
     title: "Mock Exam Completed",
     score: 0,
-    totalQuestions: 147,
+    totalQuestions: 0,
     correctCount: 0,
     incorrectCount: 0,
   });
@@ -40,7 +40,7 @@ function MockResultContent() {
 
         // Fetch mock exam metadata from backend
         let examTitle = "MSRA Mock Exam";
-        let examTotalQuestions = 147;
+        let examTotalQuestions = 0;
 
         let backendScore: number | null = null;
 
@@ -55,7 +55,7 @@ function MockResultContent() {
             );
             if (matched) {
               examTitle = matched.title || `Mock Exam ${matched.examNumber || 1}`;
-              examTotalQuestions = matched.questions || 115;
+              examTotalQuestions = matched.questions || 0;
               if (matched.bestScore) {
                 backendScore = parseInt(matched.bestScore);
               }
@@ -65,10 +65,10 @@ function MockResultContent() {
           console.warn("Could not fetch mock exams from API:", e);
         }
 
-        const score = localResult?.score ?? backendScore ?? 78;
-        const total = localResult?.totalQuestions ?? examTotalQuestions ?? 115;
+        const total = examTotalQuestions || localResult?.totalQuestions || 0;
+        const score = localResult?.score ?? backendScore ?? 0;
         const correct =
-          localResult?.correct ?? Math.round((total * score) / 100);
+          localResult?.correct ?? (total > 0 ? Math.round((total * score) / 100) : 0);
         const incorrect =
           localResult?.incorrect ?? Math.max(0, total - correct);
 
