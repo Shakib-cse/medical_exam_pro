@@ -14,7 +14,7 @@ function MockResultContent() {
   const [resultData, setResultData] = useState({
     title: "Mock Exam Completed",
     score: 0,
-    totalQuestions: 115,
+    totalQuestions: 147,
     correctCount: 0,
     incorrectCount: 0,
   });
@@ -40,7 +40,8 @@ function MockResultContent() {
 
         // Fetch mock exam metadata from backend
         let examTitle = "MSRA Mock Exam";
-        let examTotalQuestions = 115;
+        let examTotalQuestions = 147;
+
         let backendScore: number | null = null;
 
         try {

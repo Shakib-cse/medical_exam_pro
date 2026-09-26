@@ -27,8 +27,9 @@ const cleanInitialMocks: MockCardItem[] = Array.from({ length: 10 }, (_, i) => (
   score: 0,
   dateTaken: "Not attempted yet",
   duration: "120 mins",
-  questions: 115,
+  questions: 147,
 }));
+
 
 export default function MockExamsPage() {
   const user = useSelector((state: RootState) => state.auth.user);
