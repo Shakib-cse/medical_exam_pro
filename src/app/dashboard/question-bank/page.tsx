@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search, ChevronDown, Play, Loader2, HelpCircle } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { questionBankApi, QuestionBankItemData } from "@/services/questionBankApi";
 import { mockExamApi, MockExamHistoryRow } from "@/services/mockExamApi";
+import { FreeSampleDashboard } from "../_components/FreeSampleDashboard";
+import { usePermissions } from "@/lib/permissions";
 
 function formatDaysAgo(dateInput?: Date | string | number): string {
   if (!dateInput) return "Recently";
@@ -36,6 +40,32 @@ function formatDaysAgo(dateInput?: Date | string | number): string {
 
 export default function QuestionBankPage() {
   const router = useRouter();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const searchParams = useSearchParams();
+  const currentType = searchParams.get("type");
+
+  useEffect(() => {
+    if (permissions.isFreeOnly) {
+      router.replace("/dashboard");
+      return;
+    }
+    if (permissions.isPDOnly && currentType === "Clinical") {
+      router.replace("/dashboard/professional-dilemmas");
+      return;
+    }
+  }, [permissions.isFreeOnly, permissions.isPDOnly, currentType, router]);
 
   const [bankItems, setBankItems] = useState<QuestionBankItemData[]>([]);
   const [history, setHistory] = useState<MockExamHistoryRow[]>([]);
@@ -138,6 +168,10 @@ export default function QuestionBankPage() {
     }
     return acc;
   }, []).slice(0, 4);
+
+  if (permissions.isFreeOnly) {
+    return <FreeSampleDashboard />;
+  }
 
   return (
     <div className="space-y-6 font-sans">

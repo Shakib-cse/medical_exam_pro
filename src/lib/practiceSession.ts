@@ -263,6 +263,11 @@ export function saveCPSSession(session: CPSSavedSession, userId?: string | null)
         isSaved: !session.isCompleted,
       })
     );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("practice_session_update"));
+    }
   } catch (err) {
     console.error("Error saving CPS session:", err);
   }
@@ -285,6 +290,10 @@ function updateCumulativeStatsFromSession(session: CPSSavedSession, userId?: str
         try {
           const parsed = JSON.parse(existingRaw);
           if (parsed && typeof parsed.attempted === "number") {
+            // Ignore historical stats from larger exam variants that exceed current bank's total questions
+            if (session.totalQuestions > 0 && parsed.attempted > session.totalQuestions) {
+              continue;
+            }
             if (parsed.attempted > cumulative.attempted) {
               cumulative.attempted = parsed.attempted;
               cumulative.correct = parsed.correct || 0;
@@ -298,20 +307,27 @@ function updateCumulativeStatsFromSession(session: CPSSavedSession, userId?: str
     }
 
     // Current session counts
+    const sbaAnswered = Object.keys(session.userSbaAnswers || {}).length;
+    const emqAnswered = Object.values(session.userEmqAnswers || {}).reduce(
+      (acc: number, curr: any) => acc + Object.keys(curr || {}).length,
+      0
+    );
     const currentAttempted =
-      session.attemptedCount ??
-      (Object.keys(session.userSbaAnswers || {}).length +
-        Object.values(session.userEmqAnswers || {}).reduce(
-          (acc: number, curr: any) => acc + Object.keys(curr || {}).length,
-          0
-        ));
+      typeof session.attemptedCount === "number"
+        ? session.attemptedCount
+        : sbaAnswered + emqAnswered;
     const currentCorrect = session.correctCount || 0;
     const currentTime = session.elapsedSeconds || 0;
 
-    // Use higher of cumulative or current session if session in progress
-    const effectiveAttempted = Math.max(cumulative.attempted, currentAttempted);
-    const effectiveCorrect = Math.max(cumulative.correct, currentCorrect);
-    const effectiveTime = Math.max(cumulative.totalTimeSeconds, currentTime);
+    // Use current session directly if cumulative is from a stale/different size bank
+    let effectiveAttempted = Math.max(cumulative.attempted, currentAttempted);
+    let effectiveCorrect = Math.max(cumulative.correct, currentCorrect);
+    let effectiveTime = Math.max(cumulative.totalTimeSeconds, currentTime);
+
+    if (session.totalQuestions > 0) {
+      effectiveAttempted = Math.min(session.totalQuestions, effectiveAttempted);
+      effectiveCorrect = Math.min(effectiveAttempted, effectiveCorrect);
+    }
 
     const statsPayload = JSON.stringify({
       attempted: effectiveAttempted,
@@ -332,7 +348,7 @@ function updateCumulativeStatsFromSession(session: CPSSavedSession, userId?: str
       totalQ: session.totalQuestions,
       attemptsPct: progressPct,
       accuracyPct: accuracyPct,
-      hasAttempted: true,
+      hasAttempted: effectiveAttempted > 0,
     });
 
     for (const alias of aliases) {
@@ -376,10 +392,12 @@ export function getSpecialtyStats(
         try {
           const parsed = JSON.parse(rawStats);
           if (parsed && typeof parsed.attempted === "number") {
-            if (parsed.attempted > attempted) {
-              attempted = parsed.attempted;
-              correct = parsed.correct || 0;
-              totalTime = parsed.totalTimeSeconds || 0;
+            if (totalQuestions <= 0 || parsed.attempted <= totalQuestions) {
+              if (parsed.attempted > attempted) {
+                attempted = parsed.attempted;
+                correct = parsed.correct || 0;
+                totalTime = parsed.totalTimeSeconds || 0;
+              }
             }
           }
         } catch {}
@@ -391,20 +409,24 @@ export function getSpecialtyStats(
         try {
           const session = JSON.parse(rawSession);
           if (session) {
+            const sbaAnswered = Object.keys(session.userSbaAnswers || {}).length;
+            const emqAnswered = Object.values(session.userEmqAnswers || {}).reduce(
+              (acc: number, curr: any) => acc + Object.keys(curr || {}).length,
+              0
+            );
             const sAttempted =
-              session.attemptedCount ??
-              (Object.keys(session.userSbaAnswers || {}).length +
-                Object.values(session.userEmqAnswers || {}).reduce(
-                  (acc: number, curr: any) => acc + Object.keys(curr || {}).length,
-                  0
-                ));
+              typeof session.attemptedCount === "number"
+                ? session.attemptedCount
+                : sbaAnswered + emqAnswered;
             const sCorrect = session.correctCount || 0;
             const sTime = session.elapsedSeconds || 0;
 
-            if (sAttempted > attempted) {
-              attempted = sAttempted;
-              correct = sCorrect;
-              totalTime = sTime;
+            if (totalQuestions <= 0 || sAttempted <= totalQuestions) {
+              if (sAttempted > attempted) {
+                attempted = sAttempted;
+                correct = sCorrect;
+                totalTime = sTime;
+              }
             }
           }
         } catch {}
@@ -417,13 +439,20 @@ export function getSpecialtyStats(
           const t = JSON.parse(rawTopic);
           if (t && typeof t.correct === "number") {
             const tAttempted = (t.correct || 0) + (t.wrong || 0);
-            if (tAttempted > attempted) {
-              attempted = tAttempted;
-              correct = t.correct || 0;
+            if (totalQuestions <= 0 || tAttempted <= totalQuestions) {
+              if (tAttempted > attempted) {
+                attempted = tAttempted;
+                correct = t.correct || 0;
+              }
             }
           }
         } catch {}
       }
+    }
+
+    if (totalQuestions > 0) {
+      attempted = Math.min(attempted, totalQuestions);
+      correct = Math.min(correct, attempted);
     }
 
     const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
@@ -1367,10 +1396,12 @@ export function getPDStats(
         try {
           const parsed = JSON.parse(rawStats);
           if (parsed && typeof parsed.attempted === "number") {
-            if (parsed.attempted > attempted) {
-              attempted = parsed.attempted;
-              correct = parsed.correct || 0;
-              totalTime = parsed.totalTimeSeconds || 0;
+            if (totalQuestions <= 0 || parsed.attempted <= totalQuestions) {
+              if (parsed.attempted > attempted) {
+                attempted = parsed.attempted;
+                correct = parsed.correct || 0;
+                totalTime = parsed.totalTimeSeconds || 0;
+              }
             }
           }
         } catch {}
@@ -1388,14 +1419,21 @@ export function getPDStats(
               Object.values(session.questionScores || {}).filter((s: any) => s >= 70).length;
             const sTime = session.elapsedSeconds || 0;
 
-            if (sAttempted > attempted) {
-              attempted = sAttempted;
-              correct = sCorrect;
-              totalTime = sTime;
+            if (totalQuestions <= 0 || sAttempted <= totalQuestions) {
+              if (sAttempted > attempted) {
+                attempted = sAttempted;
+                correct = sCorrect;
+                totalTime = sTime;
+              }
             }
           }
         } catch {}
       }
+    }
+
+    if (totalQuestions > 0) {
+      attempted = Math.min(attempted, totalQuestions);
+      correct = Math.min(correct, attempted);
     }
 
     const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;

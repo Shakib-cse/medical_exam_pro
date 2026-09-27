@@ -52,12 +52,14 @@ export function QuestionNavigator({
           {title}
         </h3>
 
-        <div className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+        <div className="space-y-1.5 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
           {listItems.map((item, idx) => {
             const isCurrent = currentIndex === idx;
             const isFlagged = Boolean(flaggedIndices[idx]) || item.status === "flagged";
             const isCorrect = correctIndices[idx] ?? (item.status === "correct");
             const isWrong = wrongIndices[idx] ?? (item.status === "wrong");
+            const itemLabel = item.label || `Question ${idx + 1}`;
+            const itemSub = item.subTopic || "";
 
             return (
               <div
@@ -65,22 +67,35 @@ export function QuestionNavigator({
                 onClick={() => onSelectQuestion(idx)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all select-none ${
                   isCurrent
-                    ? "bg-[#E8EDF5] border border-[#B3C5DE] shadow-xs"
-                    : "hover:bg-slate-200/50"
+                    ? "bg-[#E8EDF5] border border-[#B3C5DE] shadow-xs text-slate-900"
+                    : "bg-white hover:bg-slate-100/80 border border-slate-200/80 text-slate-700"
                 }`}
               >
-                <span className="w-6 h-6 rounded bg-[#E2E8F0] text-slate-600 font-bold text-xs flex items-center justify-center shrink-0">
+                <span
+                  className={`w-6 h-6 rounded-md font-bold text-xs flex items-center justify-center shrink-0 ${
+                    isCurrent
+                      ? "bg-[#1875d2] text-white"
+                      : "bg-[#E2E8F0] text-slate-700"
+                  }`}
+                >
                   {idx + 1}
                 </span>
 
-                <span
-                  className={`text-xs sm:text-[13px] font-medium truncate flex-1 ${
-                    isCurrent ? "text-slate-900 font-semibold" : "text-slate-700"
-                  }`}
-                  title={item.subTopic || item.label}
-                >
-                  {item.subTopic || item.label}
-                </span>
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <span
+                    className={`text-xs sm:text-[13px] font-semibold truncate ${
+                      isCurrent ? "text-slate-900 font-bold" : "text-slate-800"
+                    }`}
+                    title={itemLabel}
+                  >
+                    {itemLabel}
+                  </span>
+                  {itemSub && itemSub !== itemLabel && (
+                    <span className="text-[10.5px] text-slate-500 truncate" title={itemSub}>
+                      {itemSub}
+                    </span>
+                  )}
+                </div>
 
                 <div className="w-5 flex items-center justify-center shrink-0">
                   {isFlagged ? (

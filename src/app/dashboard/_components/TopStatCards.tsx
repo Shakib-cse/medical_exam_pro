@@ -8,10 +8,10 @@ interface TopStatCardsProps {
 }
 
 export function TopStatCards({
-  attempted = 2145,
+  attempted = 0,
   totalQuestions = 11007,
-  overallAccuracy = 68,
-  averageTime = "1m 12s",
+  overallAccuracy = 0,
+  averageTime = "0s",
 }: TopStatCardsProps) {
   const percentage = totalQuestions > 0 ? Math.round((attempted / totalQuestions) * 100) : 0;
 

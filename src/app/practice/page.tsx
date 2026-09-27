@@ -1,15 +1,38 @@
 "use client";
 
-import React, { useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { Stethoscope, Scale, FileText, ArrowRight, Sparkles, HelpCircle } from "lucide-react";
+import { usePermissions } from "@/lib/permissions";
 
 function PracticeRouter() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const isFree = searchParams.get("free") === "true";
+
+  useEffect(() => {
+    // 1. Free user trying to access non-free practice
+    if (permissions.isFreeOnly && !isFree) {
+      router.replace("/dashboard");
+      return;
+    }
+
     const mockId = searchParams.get("mockId");
     const examId = searchParams.get("examId");
     const domainId = searchParams.get("domainId");
@@ -21,13 +44,17 @@ function PracticeRouter() {
 
     const queryStr = searchParams.toString();
 
-    // 1. Mock Exam redirection
+    // 2. Mock Exam redirection
     if (mockId || examId || topic.toLowerCase().includes("mock")) {
+      if (!permissions.hasMockAccess) {
+        router.replace("/dashboard");
+        return;
+      }
       router.replace(`/practice/mock-exam${queryStr ? `?${queryStr}` : ""}`);
       return;
     }
 
-    // 2. Professional Dilemmas redirection
+    // 3. Professional Dilemmas redirection
     if (
       domainId ||
       type === "SJT" ||
@@ -36,16 +63,53 @@ function PracticeRouter() {
       topic.toLowerCase().includes("dilemma") ||
       topic.toLowerCase().includes("professional")
     ) {
+      if (!permissions.hasPDAccess) {
+        router.replace("/dashboard");
+        return;
+      }
       router.replace(`/practice/professional-dilemmas${queryStr ? `?${queryStr}` : ""}`);
       return;
     }
 
-    // 3. Clinical redirection
+    // 4. Clinical Problem Solving redirection
     if (topicId || bankId || speciality || (topic && topic !== "Mock Practice Exam")) {
+      if (!isFree && !permissions.hasCPSAccess) {
+        router.replace("/dashboard");
+        return;
+      }
       router.replace(`/practice/clinical${queryStr ? `?${queryStr}` : ""}`);
       return;
     }
-  }, [router, searchParams]);
+
+    // 5. Default redirect for PD-only user landing on /practice with no params
+    if (permissions.isPDOnly) {
+      router.replace("/practice/professional-dilemmas");
+      return;
+    }
+  }, [
+    permissions.isFreeOnly,
+    permissions.hasMockAccess,
+    permissions.hasPDAccess,
+    permissions.hasCPSAccess,
+    permissions.isPDOnly,
+    isFree,
+    router,
+    searchParams,
+  ]);
+
+  if (permissions.isFreeOnly && !isFree) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-lg border border-slate-200">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-slate-900 mb-2">Redirecting to Dashboard...</h2>
+          <p className="text-sm text-slate-500">
+            Practice modules are only available on subscribed plans.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
@@ -64,34 +128,40 @@ function PracticeRouter() {
           </p>
         </div>
 
-        {/* 3 Separate Practice Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Practice Cards */}
+        <div
+          className={`grid grid-cols-1 ${
+            permissions.isPDOnly ? "max-w-md mx-auto" : "md:grid-cols-3"
+          } gap-6`}
+        >
           {/* Card 1: Clinical Problem Solving */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between group">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <Stethoscope className="w-6 h-6 stroke-[2.2]" />
+          {!permissions.isPDOnly && (
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between group">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  <Stethoscope className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                  Clinical Focus
+                </span>
+                <h2 className="text-lg font-bold text-slate-900 mt-2">
+                  Clinical Problem Solving
+                </h2>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  Practice SBA questions with clinical vignettes, immediate feedback, diagnostic rationales, and full question navigator.
+                </p>
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                Clinical Focus
-              </span>
-              <h2 className="text-lg font-bold text-slate-900 mt-2">
-                Clinical Problem Solving
-              </h2>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                Practice SBA questions with clinical vignettes, immediate feedback, diagnostic rationales, and full question navigator.
-              </p>
+              <div className="pt-6 mt-4 border-t border-slate-100">
+                <Link
+                  href="/practice/clinical"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                >
+                  <span>Launch Clinical Practice</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
-            <div className="pt-6 mt-4 border-t border-slate-100">
-              <Link
-                href="/practice/clinical"
-                className="w-full py-2.5 px-4 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
-              >
-                <span>Launch Clinical Practice</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
+          )}
 
           {/* Card 2: Professional Dilemmas */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-400 transition-all flex flex-col justify-between group">
@@ -121,31 +191,33 @@ function PracticeRouter() {
           </div>
 
           {/* Card 3: Mock Exam */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-400 transition-all flex flex-col justify-between group">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <FileText className="w-6 h-6 stroke-[2.2]" />
+          {!permissions.isPDOnly && (
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-400 transition-all flex flex-col justify-between group">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-orange-50 text-brand-orange flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  <FileText className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-brand-orange bg-orange-50 px-2 py-0.5 rounded-md">
+                  Full MSRA Simulation
+                </span>
+                <h2 className="text-lg font-bold text-slate-900 mt-2">
+                  Mock Exam
+                </h2>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  Realistic exam condition timed simulation covering both papers with flag for review, section progression, and score report.
+                </p>
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-brand-orange bg-orange-50 px-2 py-0.5 rounded-md">
-                Full MSRA Simulation
-              </span>
-              <h2 className="text-lg font-bold text-slate-900 mt-2">
-                Mock Exam
-              </h2>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                Realistic exam condition timed simulation covering both papers with flag for review, section progression, and score report.
-              </p>
+              <div className="pt-6 mt-4 border-t border-slate-100">
+                <Link
+                  href="/practice/mock-exam"
+                  className="w-full py-2.5 px-4 rounded-xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                >
+                  <span>Start Mock Exam</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
-            <div className="pt-6 mt-4 border-t border-slate-100">
-              <Link
-                href="/practice/mock-exam"
-                className="w-full py-2.5 px-4 rounded-xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
-              >
-                <span>Start Mock Exam</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

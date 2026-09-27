@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ChevronRight, ArrowRight } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { FreeSampleDashboard } from "../_components/FreeSampleDashboard";
 import {
   getSpecialtyStats,
   formatAverageTime,
@@ -13,6 +15,7 @@ import {
   getCurrentUserId,
   CPS_SPECIALTIES_CONFIG,
 } from "@/lib/practiceSession";
+import { usePermissions } from "@/lib/permissions";
 
 interface SpecialityCardData {
   id: string;
@@ -33,11 +36,33 @@ const specialitiesData: SpecialityCardData[] = CPS_SPECIALTIES_CONFIG.map((item)
 }));
 
 export default function ClinicalProblemSolvingPage() {
-  const user = useSelector((state: RootState) => state.auth.user);
+  const router = useRouter();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const user = reduxUser || localUser;
+
+  useEffect(() => {
+    if (!permissions.hasCPSAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasCPSAccess, router]);
+
   const [filter, setFilter] = useState<"all" | "weakest" | "in_progress">("all");
   const [statsMap, setStatsMap] = useState<Record<string, CPSSpecialtyStats>>({});
 
   useEffect(() => {
+    if (!permissions.hasCPSAccess) return;
     function loadAllStats() {
       const activeUserId = user?.id || getCurrentUserId();
       const map: Record<string, CPSSpecialtyStats> = {};
@@ -90,6 +115,18 @@ export default function ClinicalProblemSolvingPage() {
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (overallAccuracy / 100) * circumference;
+
+  if (!permissions.hasCPSAccess) {
+    if (permissions.isFreeOnly) {
+      return <FreeSampleDashboard />;
+    }
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6 space-y-3">
+        <div className="w-8 h-8 border-4 border-[#1875d2] border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-slate-700">Redirecting to Dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 sm:space-y-7 pb-8">

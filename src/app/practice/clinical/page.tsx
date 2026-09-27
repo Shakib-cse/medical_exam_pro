@@ -6,6 +6,8 @@ import {
   AlertCircle,
   HelpCircle,
 } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { overviewApi } from "@/services/overviewApi";
 import { mockExamApi } from "@/services/mockExamApi";
 import { questionBankApi } from "@/services/questionBankApi";
@@ -27,6 +29,7 @@ import {
   saveQuestionReport,
   getCurrentUserId,
 } from "@/lib/practiceSession";
+import { usePermissions } from "@/lib/permissions";
 
 // ==========================================
 // 1. DATA TYPES & INTERFACES
@@ -79,11 +82,33 @@ export type PracticeItem = SBAQuestion | EMQTheme;
 function ClinicalPracticeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const user = reduxUser || localUser;
+  const isFree = searchParams.get("free") === "true";
+
+  useEffect(() => {
+    if (!isFree && !permissions.hasCPSAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasCPSAccess, isFree, router]);
 
   // Query parameters from Specialty Practice Settings Page
   const specialityParam =
     searchParams.get("speciality") || searchParams.get("topic") || "Cardiology & Respiratory Focus";
-  const questionTypeParam = (searchParams.get("type") || "SBA") as "SBA" | "EMQ" | "Both";
+  const defaultQuestionType = isFree ? "Both" : "SBA";
+  const questionTypeParam = (searchParams.get("type") || defaultQuestionType) as "SBA" | "EMQ" | "Both";
   const timerParam = searchParams.get("timer") || "on";
   const topicsParam = searchParams.get("topics") || "all";
   const modeParam = searchParams.get("mode") || "new";
@@ -143,7 +168,10 @@ function ClinicalPracticeContent() {
         const rawSpecialty = specialityParam.trim();
 
         // 1. Fetch QuestionBank list to get matching bank ID
-        const banksRes = await questionBankApi.getQuestionBanks();
+        const isFreeOnly = searchParams.get("free") === "true";
+        const banksRes = isFreeOnly
+          ? await questionBankApi.getFreeSampleBanks()
+          : await questionBankApi.getQuestionBanks();
         const banks = banksRes.data || [];
 
         // Fuzzy match specialty title
@@ -164,9 +192,12 @@ function ClinicalPracticeContent() {
         let loadedItems: PracticeItem[] = [];
 
         if (matchedBankMeta) {
-          // Fetch full questions with options and explanations for this QuestionBank
-          const bankDetailRes = await questionBankApi.getQuestionBankById(matchedBankMeta.id);
-          const fullBank = bankDetailRes.data;
+          // If questions are already populated (as in free sample banks), reuse directly without second API round-trip
+          let fullBank: any = matchedBankMeta;
+          if (!fullBank?.questions || !Array.isArray(fullBank.questions) || fullBank.questions.length === 0) {
+            const bankDetailRes = await questionBankApi.getQuestionBankById(matchedBankMeta.id, isFreeOnly);
+            fullBank = bankDetailRes.data;
+          }
 
           if (fullBank?.questions && Array.isArray(fullBank.questions) && fullBank.questions.length > 0) {
             const parsedItems: PracticeItem[] = [];
@@ -368,8 +399,17 @@ function ClinicalPracticeContent() {
         }
       }
 
+      const qNum = idx + 1;
+      const label = item.itemType === "EMQ" ? `Theme ${qNum}` : `Question ${qNum}`;
+      const sub =
+        item.itemType === "EMQ"
+          ? (item.title || item.subTopic || `Extended Matching (${item.cases?.length || 4} cases)`)
+          : (item.subTopic || (item as any).topic || `Single Best Answer`);
+
       return {
-        id: idx + 1,
+        id: item.id || qNum,
+        label,
+        subTopic: sub,
         status,
         flagged: Boolean(flagged[idx]),
       };
@@ -600,6 +640,20 @@ function ClinicalPracticeContent() {
         onRetake={handleRetakeSession}
         examType="CPS"
       />
+    );
+  }
+
+  if (!isFree && !permissions.hasCPSAccess) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-lg border border-slate-200">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-slate-900 mb-2">Redirecting to Dashboard...</h2>
+          <p className="text-sm text-slate-500">
+            Clinical Problem Solving is only accessible with the Full MSRA Pass.
+          </p>
+        </div>
+      </div>
     );
   }
 

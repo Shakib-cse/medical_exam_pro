@@ -12,12 +12,24 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { FileText } from "lucide-react";
+import { usePermissions } from "@/lib/permissions";
 
 interface SidebarProps {
   className?: string;
+}
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: any;
+  exact?: boolean;
+  match?: () => boolean;
 }
 
 export function Sidebar({ className }: SidebarProps) {
@@ -25,9 +37,10 @@ export function Sidebar({ className }: SidebarProps) {
   const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const permissions = usePermissions();
   const currentType = searchParams.get("type");
 
-  const mainNavItems = [
+  const fullNavItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: Home, exact: true },
     {
       label: "Clinical Problem Solving",
@@ -52,6 +65,52 @@ export function Sidebar({ className }: SidebarProps) {
       match: () => pathname.startsWith("/dashboard/mock-exams"),
     },
   ];
+
+  const pdNavItems: NavItem[] = [
+    {
+      label: "Dashboard",
+      href: "/dashboard",
+      icon: Home,
+      match: () =>
+        pathname === "/dashboard" && searchParams.get("view") !== "free-sample",
+    },
+    {
+      label: "Professional Dilemmas",
+      href: "/dashboard/professional-dilemmas",
+      icon: Scale,
+      match: () =>
+        pathname.startsWith("/dashboard/professional-dilemmas") ||
+        (pathname.includes("/question-bank") && currentType === "SJT"),
+    },
+    {
+      label: "Free Sample Questions",
+      href: "/dashboard/free-sample",
+      icon: FileText,
+      match: () =>
+        pathname.startsWith("/dashboard/free-sample") ||
+        (pathname === "/dashboard" && searchParams.get("view") === "free-sample"),
+    },
+  ];
+
+  const freeNavItems: NavItem[] = [
+    {
+      label: "Free Sample Questions",
+      href: "/dashboard",
+      icon: FileText,
+      match: () =>
+        pathname === "/dashboard" || pathname.startsWith("/dashboard/free-sample"),
+    },
+  ];
+
+  let activeNavItems: NavItem[] = [];
+  if (permissions.isFreeOnly) {
+    activeNavItems = freeNavItems;
+  } else if (permissions.isPDOnly) {
+    activeNavItems = pdNavItems;
+  } else {
+    // Full MSRA Pass or Admin
+    activeNavItems = fullNavItems;
+  }
 
   const bottomNavItems = [
     {
@@ -112,7 +171,7 @@ export function Sidebar({ className }: SidebarProps) {
         {/* Main Navigation Content */}
         <div className="flex-1 py-6 px-3.5 space-y-1.5 overflow-y-auto custom-scrollbar">
           <nav className="space-y-1.5">
-            {mainNavItems.map((item) => {
+            {activeNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.match
                 ? item.match()

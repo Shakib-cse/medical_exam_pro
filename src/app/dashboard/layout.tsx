@@ -1,6 +1,7 @@
 import { Sidebar } from "./_components/Sidebar";
 import { Header } from "./_components/Header";
 import { QuickAccessHighlights } from "./_components/QuickAccessHighlights";
+import { DashboardSubscriptionGuard } from "./_components/DashboardSubscriptionGuard";
 
 export default function DashboardLayout({
   children,
@@ -16,7 +17,9 @@ export default function DashboardLayout({
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0 min-h-screen relative">
         <Header />
         <main className="flex-1 px-4 pt-4 sm:px-6 sm:pt-6 lg:px-7 lg:pt-7 pb-48 sm:pb-52 lg:pb-60 space-y-6 w-full mx-auto">
-          {children}
+          <DashboardSubscriptionGuard>
+            {children}
+          </DashboardSubscriptionGuard>
         </main>
 
         {/* Fixed Floating Bottom Quick Access Bar */}

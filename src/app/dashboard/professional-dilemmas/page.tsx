@@ -3,15 +3,18 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { overviewApi, DilemmaCardData } from "@/services/overviewApi";
+import { FreeSampleDashboard } from "../_components/FreeSampleDashboard";
 import {
   getPDStats,
   formatAverageTime,
   getCurrentUserId,
   CPSSpecialtyStats,
 } from "@/lib/practiceSession";
+import { usePermissions } from "@/lib/permissions";
 
 interface DomainCard {
   id: string;
@@ -58,8 +61,29 @@ const DEFAULT_DOMAINS: DomainCard[] = [
 ];
 
 export default function ProfessionalDilemmasPage() {
+  const router = useRouter();
   const [domainCards, setDomainCards] = useState<DomainCard[]>(DEFAULT_DOMAINS);
-  const user = useSelector((state: RootState) => (state as any).auth?.user);
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const user = reduxUser || localUser;
+
+  useEffect(() => {
+    if (!permissions.hasPDAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasPDAccess, router]);
+
   const [statsMap, setStatsMap] = useState<Record<string, CPSSpecialtyStats>>({});
 
   useEffect(() => {
@@ -155,6 +179,10 @@ export default function ProfessionalDilemmasPage() {
 
     loadContent();
   }, []);
+
+  if (!permissions.hasPDAccess) {
+    return <FreeSampleDashboard />;
+  }
 
   return (
     <div className="space-y-6 sm:space-y-7 pb-10 w-full">

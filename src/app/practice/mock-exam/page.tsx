@@ -19,6 +19,8 @@ import {
   MessageSquare,
   AlertTriangle,
 } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { mockExamApi, MockQuestion, MockExamDetail } from "@/services/mockExamApi";
 import { ClinicalSbaCard } from "../clinical/_components/ClinicalSbaCard";
 import { ClinicalEmqCard } from "../clinical/_components/ClinicalEmqCard";
@@ -39,10 +41,19 @@ import {
   clearMockSession,
   markMockSessionCompleted,
 } from "@/lib/practiceSession";
+import { usePermissions } from "@/lib/permissions";
 
 function MockExamPracticeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const permissions = usePermissions();
+
+  useEffect(() => {
+    if (!permissions.hasMockAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasMockAccess, router]);
+
   const mockIdParam = searchParams.get("mockId") || "1";
   const modeParam = searchParams.get("mode");
 
@@ -506,6 +517,10 @@ function MockExamPracticeContent() {
     const secs = safe % 60;
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
+
+  if (!permissions.hasMockAccess) {
+    return null;
+  }
 
   // If exam submitted, show final result
   if (examSubmitted) {

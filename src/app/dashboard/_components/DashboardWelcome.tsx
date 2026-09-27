@@ -12,8 +12,8 @@ interface DashboardWelcomeProps {
 }
 
 export function DashboardWelcome({
-  userName = "Alex",
-  subscriptionDaysLeft = 42,
+  userName = "Doctor",
+  subscriptionDaysLeft = 30,
   onResetProgress,
 }: DashboardWelcomeProps) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -42,7 +42,7 @@ export function DashboardWelcome({
             <span>
               Subscription:{" "}
               <strong className="font-bold text-amber-500">
-                {subscriptionDaysLeft} days left
+                {subscriptionDaysLeft > 0 ? `${subscriptionDaysLeft} days left` : "Expired / Renew"}
               </strong>
             </span>
           </Link>

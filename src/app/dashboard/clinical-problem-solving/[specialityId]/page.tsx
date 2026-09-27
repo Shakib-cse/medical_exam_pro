@@ -23,6 +23,7 @@ import {
   getCurrentUserId,
   CPS_SPECIALTIES_CONFIG,
 } from "@/lib/practiceSession";
+import { usePermissions } from "@/lib/permissions";
 
 interface SpecialtyMeta {
   title: string;
@@ -133,8 +134,31 @@ function setCachedSpecialtyData(slug: string, data: QuestionBankItemData) {
   }
 }
 
+import { FreeSampleDashboard } from "../../_components/FreeSampleDashboard";
+
 export default function SpecialtyPracticeSettingsPage() {
   const router = useRouter();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const user = reduxUser || localUser;
+
+  useEffect(() => {
+    if (!permissions.hasCPSAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasCPSAccess, router]);
+
   const params = useParams();
   const rawId = typeof params?.specialityId === "string" ? params.specialityId.toLowerCase() : "cardiovascular";
   const defaultMeta = SPECIALTY_META[rawId] || {
@@ -206,7 +230,6 @@ export default function SpecialtyPracticeSettingsPage() {
   }, [rawId]);
 
   // Check for unfinished session on mount and when rawId/currentTitle changes
-  const user = useSelector((state: RootState) => state.auth.user);
   const activeUserId = user?.id || getCurrentUserId();
 
   useEffect(() => {
@@ -319,6 +342,18 @@ export default function SpecialtyPracticeSettingsPage() {
             Retry
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (!permissions.hasCPSAccess) {
+    if (permissions.isFreeOnly) {
+      return <FreeSampleDashboard />;
+    }
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6 space-y-3">
+        <div className="w-8 h-8 border-4 border-[#1875d2] border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-slate-700">Redirecting to Dashboard...</p>
       </div>
     );
   }

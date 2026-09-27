@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Flag,
   Search,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { FreeSampleDashboard } from "../_components/FreeSampleDashboard";
 import {
   getFlaggedQuestions,
   saveFlaggedQuestions,
@@ -48,8 +49,28 @@ function getCategoryBadgeClasses(category: string) {
 }
 
 function FlaggedQuestionsContent() {
-  const user = useSelector((state: RootState) => state.auth.user);
+  const router = useRouter();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const user = reduxUser || localUser;
   const searchParams = useSearchParams();
+
+  const isSubscribed = Boolean(
+    user?.isSubscribed ||
+    user?.role?.name === "admin" ||
+    user?.role === "admin"
+  );
+
 
   const [questions, setQuestions] = useState<FlaggedQuestionItem[]>(() => {
     if (typeof window !== "undefined") {
@@ -205,6 +226,7 @@ function FlaggedQuestionsContent() {
       <span>{toastMessage}</span>
     </div>
   ) : null;
+
 
   // ----------------------------------------------------
   // REVIEW MODE (SCREENSHOT 2)

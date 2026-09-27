@@ -7,6 +7,8 @@ import {
   BookOpen,
   Loader2,
 } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { questionBankApi } from "@/services/questionBankApi";
 import { QuestionNavigator, NavigatorItem } from "../_components/QuestionNavigator";
 import { ExamResultView } from "../_components/ExamResultView";
@@ -24,6 +26,7 @@ import {
   saveQuestionReport,
   getCurrentUserId,
 } from "@/lib/practiceSession";
+import { usePermissions } from "@/lib/permissions";
 
 // ========================================================
 // DATA TYPES & INTERFACES
@@ -88,6 +91,28 @@ function ProfessionalDilemmasPracticeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const user = reduxUser || localUser;
+  const isFree = searchParams.get("free") === "true";
+
+  useEffect(() => {
+    if (!isFree && !permissions.hasPDAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasPDAccess, isFree, router]);
+
   const rawTopic = searchParams.get("topic") || searchParams.get("domain") || "coping-with-pressure";
   const timerSetting = searchParams.get("timer") !== "off";
   const modeParam = searchParams.get("mode") || "all";
@@ -118,9 +143,15 @@ function ProfessionalDilemmasPracticeContent() {
 
     async function loadPDQuestions() {
       try {
+        const isFreeOnly = searchParams.get("free") === "true";
+        if (!isFreeOnly && !permissions.hasPDAccess) {
+          return;
+        }
         setLoading(true);
 
-        const banksRes = await questionBankApi.getQuestionBanks();
+        const banksRes = isFreeOnly
+          ? await questionBankApi.getFreeSampleBanks()
+          : await questionBankApi.getQuestionBanks();
         const banks = banksRes.data || [];
 
         const normalizedTopic = rawTopic.toLowerCase().replace(/[-_]/g, " ");
@@ -136,8 +167,12 @@ function ProfessionalDilemmasPracticeContent() {
         });
 
         if (matchedBank) {
-          const detailRes = await questionBankApi.getQuestionBankById(matchedBank.id);
-          const fullBank = detailRes.data;
+          // If questions are already populated (as in free sample banks), reuse directly without second API round-trip
+          let fullBank: any = matchedBank;
+          if (!fullBank?.questions || !Array.isArray(fullBank.questions) || fullBank.questions.length === 0) {
+            const detailRes = await questionBankApi.getQuestionBankById(matchedBank.id, isFreeOnly);
+            fullBank = detailRes.data;
+          }
 
           if (fullBank?.questions && Array.isArray(fullBank.questions) && fullBank.questions.length > 0) {
             let parsedList: PDQuestion[] = fullBank.questions.map((q: any, idx: number) => {
@@ -481,6 +516,20 @@ function ProfessionalDilemmasPracticeContent() {
         }}
         examType="PD"
       />
+    );
+  }
+
+  if (!isFree && !permissions.hasPDAccess) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-lg border border-slate-200">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-slate-900 mb-2">Redirecting to Dashboard...</h2>
+          <p className="text-sm text-slate-500">
+            Professional Dilemmas question banks are only available on subscribed plans.
+          </p>
+        </div>
+      </div>
     );
   }
 

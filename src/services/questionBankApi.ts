@@ -59,21 +59,64 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+let cachedFreeSamplePromise: Promise<ApiResponse<QuestionBankItemData[]>> | null = null;
+let cachedFreeSampleData: ApiResponse<QuestionBankItemData[]> | null = null;
+let freeSampleCachedAt = 0;
+const FREE_SAMPLE_TTL_MS = 15 * 60 * 1000;
+
 export const questionBankApi = {
   getQuestionBanks: async () => {
     const res = await api.get<ApiResponse<QuestionBankItemData[]>>("/question-bank");
     return res.data;
   },
 
-  getQuestionBankById: async (id: string) => {
-    const res = await api.get<ApiResponse<QuestionBankItemData>>(`/question-bank/${id}`);
+  getFreeSampleBanks: async (forceRefresh: boolean = false) => {
+    if (!forceRefresh && cachedFreeSampleData && Date.now() - freeSampleCachedAt < FREE_SAMPLE_TTL_MS) {
+      return cachedFreeSampleData;
+    }
+    if (!forceRefresh && cachedFreeSamplePromise) {
+      return cachedFreeSamplePromise;
+    }
+    cachedFreeSamplePromise = (async () => {
+      try {
+        const res = await api.get<ApiResponse<QuestionBankItemData[]>>("/question-bank/free-sample");
+        cachedFreeSampleData = res.data;
+        freeSampleCachedAt = Date.now();
+        return res.data;
+      } finally {
+        cachedFreeSamplePromise = null;
+      }
+    })();
+    return cachedFreeSamplePromise;
+  },
+
+  getQuestionBankById: async (id: string, freeOnly: boolean = false) => {
+    if (freeOnly && cachedFreeSampleData?.data) {
+      const match = cachedFreeSampleData.data.find(
+        (b) =>
+          b.id === id ||
+          b.title?.toLowerCase().trim() === id.toLowerCase().trim() ||
+          b.specialty?.toLowerCase().trim() === id.toLowerCase().trim()
+      );
+      if (match) {
+        return {
+          success: true,
+          data: match,
+        };
+      }
+    }
+    const query = freeOnly ? "?free=true" : "";
+    const res = await api.get<ApiResponse<QuestionBankItemData>>(`/question-bank/${id}${query}`);
     return res.data;
   },
 
-  getQuestionBankBySpecialty: async (specialty: string, summary: boolean = true) => {
-    const query = summary ? "?summary=true" : "?summary=false";
+  getQuestionBankBySpecialty: async (specialty: string, summary: boolean = true, freeOnly: boolean = false) => {
+    const params = new URLSearchParams();
+    if (summary) params.append("summary", "true");
+    else params.append("summary", "false");
+    if (freeOnly) params.append("free", "true");
     const res = await api.get<ApiResponse<QuestionBankItemData>>(
-      `/question-bank/specialty/${encodeURIComponent(specialty)}${query}`
+      `/question-bank/specialty/${encodeURIComponent(specialty)}?${params.toString()}`
     );
     return res.data;
   },

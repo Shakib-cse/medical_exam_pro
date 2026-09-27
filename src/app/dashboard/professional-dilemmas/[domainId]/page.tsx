@@ -16,11 +16,35 @@ import {
   PD_DOMAINS_CONFIG,
 } from "@/lib/practiceSession";
 
+import { FreeSampleDashboard } from "../../_components/FreeSampleDashboard";
+import { usePermissions } from "@/lib/permissions";
+
 // In-memory cache for instant client navigation
 const pdClientCache = new Map<string, QuestionBankItemData>();
 
 export default function ProfessionalDilemmaDomainPage() {
   const router = useRouter();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const user = reduxUser || localUser;
+
+  useEffect(() => {
+    if (!permissions.hasPDAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasPDAccess, router]);
+
   const params = useParams();
   const rawDomainId = (params?.domainId as string) || "coping-with-pressure";
   const normalizedId = rawDomainId.toLowerCase();
@@ -48,7 +72,6 @@ export default function ProfessionalDilemmaDomainPage() {
   // Saved in-progress session state for resuming
   const [savedSession, setSavedSession] = useState<PDSavedSession | null>(null);
 
-  const user = useSelector((state: RootState) => (state as any).auth?.user);
   const activeUserId = user?.id || getCurrentUserId();
 
   // Dynamic question counts and subtopics from database
@@ -199,6 +222,10 @@ export default function ProfessionalDilemmaDomainPage() {
     timer: timerEnabled ? "on" : "off",
     topics: topicMode === "all" ? "all" : selectedTopics.join("|||"),
   });
+
+  if (!permissions.hasPDAccess) {
+    return <FreeSampleDashboard />;
+  }
 
   return (
     <div className="space-y-6 sm:space-y-7 pb-10 w-full">

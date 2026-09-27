@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, User, LogOut, Settings, ShieldCheck, HelpCircle } from "lucide-react";
+import { Search, User, LogOut, Settings, ShieldCheck, HelpCircle, Zap, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/redux/slices/authSlice";
@@ -12,10 +12,28 @@ import { RootState } from "@/redux/store";
 export function Header() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Sync stored user for client-side persistence and hydration
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const user = reduxUser || localUser;
+  const isAdmin = Boolean(
+    user?.role?.name === "admin" ||
+    user?.role === "admin"
+  );
+  const isSubscribed = Boolean(user?.isSubscribed || isAdmin);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -76,7 +94,13 @@ export function Header() {
           >
             <Avatar className="w-8 h-8 bg-transparent">
               <AvatarFallback className="bg-transparent text-white font-bold text-xs">
-                {user?.firstName ? user.firstName.charAt(0).toUpperCase() : <User className="w-4 h-4 text-cyan-300" />}
+                {user?.firstName ? (
+                  user.firstName.charAt(0).toUpperCase()
+                ) : user?.displayName ? (
+                  user.displayName.charAt(0).toUpperCase()
+                ) : (
+                  <User className="w-4 h-4 text-cyan-300" />
+                )}
               </AvatarFallback>
             </Avatar>
           </button>
@@ -85,17 +109,48 @@ export function Header() {
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-[#082138] border border-[#183657] rounded-xl shadow-2xl z-50 p-2 text-slate-200 animate-in fade-in zoom-in-95 duration-150">
               {/* Profile Header */}
-              <div className="px-3 py-2.5 border-b border-[#183657] space-y-0.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-white text-sm">{user?.firstName || "User"} {user?.lastName || ""}</span>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 bg-brand-orange text-white rounded-md shadow-xs">
-                    PRO
+              <div className="px-3 py-2.5 border-b border-[#183657] space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-white text-sm truncate max-w-[150px]">
+                    {user?.firstName || user?.lastName
+                      ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
+                      : user?.displayName || "User"}
                   </span>
+                  {isAdmin ? (
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 bg-purple-600 text-white rounded-md shadow-xs tracking-wider shrink-0">
+                      ADMIN
+                    </span>
+                  ) : isSubscribed ? (
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 bg-[#f97316] text-white rounded-md shadow-xs tracking-wider shrink-0">
+                      PRO
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-700/80 text-slate-300 border border-slate-600/70 rounded-md shadow-xs tracking-wider shrink-0">
+                      FREE
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-[#97afc7] truncate">
                   {user?.email || "user@example.com"}
                 </p>
               </div>
+
+              {/* Free user upgrade prompt */}
+              {!isSubscribed && (
+                <div className="p-1.5 border-b border-[#183657]">
+                  <Link
+                    href="/dashboard/subscription"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#ea580c] to-[#f97316] hover:from-[#c2410c] hover:to-[#ea580c] text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 fill-white shrink-0" />
+                      <span>Upgrade to Pro</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  </Link>
+                </div>
+              )}
 
               {/* Menu Items */}
               <div className="py-1 space-y-0.5">

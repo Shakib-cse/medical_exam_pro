@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Info, Trophy, Calendar } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { mockExamApi } from "@/services/mockExamApi";
 import { getCurrentUserId, getUserPrefix } from "@/lib/practiceSession";
+import { FreeSampleDashboard } from "../_components/FreeSampleDashboard";
+import { usePermissions } from "@/lib/permissions";
 
 interface MockCardItem {
   id: string;
@@ -20,7 +23,28 @@ interface MockCardItem {
 }
 
 export default function MockExamsPage() {
-  const user = useSelector((state: RootState) => state.auth.user);
+  const router = useRouter();
+  const reduxUser = useSelector((state: RootState) => (state as any).auth?.user);
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("auth_user");
+      if (stored) {
+        setLocalUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const permissions = usePermissions();
+  const user = reduxUser || localUser;
+
+  useEffect(() => {
+    if (!permissions.hasMockAccess) {
+      router.replace("/dashboard");
+    }
+  }, [permissions.hasMockAccess, router]);
+
   const [mockList, setMockList] = useState<MockCardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -28,6 +52,10 @@ export default function MockExamsPage() {
     let isMounted = true;
 
     async function loadData() {
+      if (!permissions.hasMockAccess) {
+        setIsLoading(false);
+        return;
+      }
       try {
         const activeUid = user?.id || getCurrentUserId();
         const userPrefix = getUserPrefix(activeUid);
@@ -122,6 +150,18 @@ export default function MockExamsPage() {
             completedMocks.length
         )
       : 0;
+
+  if (!permissions.hasMockAccess) {
+    if (permissions.isFreeOnly) {
+      return <FreeSampleDashboard />;
+    }
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6 space-y-3">
+        <div className="w-8 h-8 border-4 border-[#1875d2] border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-slate-700">Redirecting to Dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 sm:space-y-7 pb-10 w-full">

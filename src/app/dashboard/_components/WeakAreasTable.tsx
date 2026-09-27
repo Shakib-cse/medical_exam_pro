@@ -83,9 +83,11 @@ export function WeakAreasTable({ items = defaultWeakAreas }: WeakAreasTableProps
                   {/* Action Button */}
                   <td className="py-4 px-6 text-right">
                     <Link
-                      href={`/practice?topic=${encodeURIComponent(
-                        item.topic
-                      )}&speciality=${encodeURIComponent(item.speciality)}`}
+                      href={
+                        item.speciality === "Professional Dilemmas"
+                          ? `/practice/professional-dilemmas?topic=${encodeURIComponent(item.topic)}`
+                          : `/practice/clinical?speciality=${encodeURIComponent(item.speciality)}&type=Both`
+                      }
                       className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-amber-400/90 text-amber-600 hover:bg-amber-500 hover:text-white font-bold text-xs transition-all shadow-2xs active:scale-95 cursor-pointer"
                     >
                       <RotateCw className="w-3 h-3 group-hover:rotate-180 transition-transform duration-300" />
