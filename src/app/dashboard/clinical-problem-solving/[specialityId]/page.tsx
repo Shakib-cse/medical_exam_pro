@@ -22,6 +22,7 @@ import {
   formatAverageTime,
   getCurrentUserId,
   CPS_SPECIALTIES_CONFIG,
+  CPS_SPECIALTY_SUBTOPICS,
 } from "@/lib/practiceSession";
 import { usePermissions } from "@/lib/permissions";
 
@@ -182,16 +183,32 @@ export default function SpecialtyPracticeSettingsPage() {
   // Saved in-progress session state for resuming
   const [savedSession, setSavedSession] = useState<CPSSavedSession | null>(null);
 
-  // Pure dynamic database values - zero dummy data
-  const availableTopics = dynamicBank?.subTopics || [];
+  // Instant zero-delay subtopics from precompiled dictionary or dynamic bank
   const currentTitle = dynamicBank?.title || defaultMeta.title;
   const currentSubtitle = dynamicBank?.description || defaultMeta.subtitle;
+  const fallbackTopics =
+    CPS_SPECIALTY_SUBTOPICS[rawId] ||
+    CPS_SPECIALTY_SUBTOPICS[currentTitle] ||
+    [];
+  const availableTopics =
+    dynamicBank?.subTopics && dynamicBank.subTopics.length > 0
+      ? dynamicBank.subTopics
+      : fallbackTopics;
+
   const specConfig = CPS_SPECIALTIES_CONFIG.find(
     (c) => c.id === rawId || c.title.toLowerCase() === currentTitle.toLowerCase()
   );
   const currentSbaCount = (dynamicBank as any)?.sbaCount ?? specConfig?.sbaCount ?? 0;
   const currentEmqCount = (dynamicBank as any)?.emqCount ?? specConfig?.emqCount ?? 0;
   const currentTotalQ = dynamicBank?.questionCount || specConfig?.totalQ || (currentSbaCount + currentEmqCount) || 0;
+
+  // Background prefetch the full question bank so starting a practice session is 100% instant!
+  useEffect(() => {
+    const target = dynamicBank?.id || rawId;
+    if (target) {
+      questionBankApi.prefetchQuestionBank(target);
+    }
+  }, [dynamicBank?.id, rawId]);
 
   // Fetch dynamic question bank and subtopics from database whenever rawId changes
   useEffect(() => {
@@ -203,13 +220,17 @@ export default function SpecialtyPracticeSettingsPage() {
           setDynamicBank(cached);
           setLoadingBank(false);
         } else if (!cached && isMounted) {
-          setLoadingBank(true);
+          setLoadingBank(fallbackTopics.length === 0);
         }
         setLoadError(null);
         const res = await questionBankApi.getQuestionBankBySpecialty(rawId, true);
         if (isMounted && res?.data) {
           setDynamicBank(res.data);
           setCachedSpecialtyData(rawId, res.data);
+          // Also prefetch full bank for this ID
+          if (res.data.id) {
+            questionBankApi.prefetchQuestionBank(res.data.id);
+          }
         }
       } catch (err: any) {
         console.error("Failed to load question bank:", err);
@@ -227,7 +248,7 @@ export default function SpecialtyPracticeSettingsPage() {
     return () => {
       isMounted = false;
     };
-  }, [rawId]);
+  }, [rawId, fallbackTopics.length]);
 
   // Check for unfinished session on mount and when rawId/currentTitle changes
   const activeUserId = user?.id || getCurrentUserId();
@@ -697,9 +718,13 @@ export default function SpecialtyPracticeSettingsPage() {
             <Link
               href={
                 hasUnfinishedSession && savedSession
-                  ? `/practice/clinical?topic=${encodeURIComponent(savedSession.speciality || currentTitle)}&speciality=${encodeURIComponent(savedSession.speciality || currentTitle)}&type=${savedSession.questionType}&timer=${savedSession.timer}&mode=resume&topics=${encodeURIComponent(savedSession.topics)}`
+                  ? `/practice/clinical?topic=${encodeURIComponent(savedSession.speciality || currentTitle)}&speciality=${encodeURIComponent(savedSession.speciality || currentTitle)}&type=${savedSession.questionType}&timer=${savedSession.timer}&mode=resume&topics=${encodeURIComponent(savedSession.topics)}&bankId=${encodeURIComponent(dynamicBank?.id || "")}`
                   : "#"
               }
+              onMouseEnter={() => {
+                const target = dynamicBank?.id || rawId;
+                if (target) questionBankApi.prefetchQuestionBank(target);
+              }}
               className={`w-full py-3 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-blue-500/20 flex items-center justify-center transition-all ${
                 hasUnfinishedSession
                   ? "cursor-pointer opacity-100"
@@ -710,7 +735,11 @@ export default function SpecialtyPracticeSettingsPage() {
             </Link>
 
             <Link
-              href={`/practice/clinical?topic=${encodeURIComponent(currentTitle)}&speciality=${encodeURIComponent(currentTitle)}&type=${questionType}&timer=${timerEnabled ? "on" : "off"}&mode=new&topics=${topicMode === "all" ? "all" : encodeURIComponent(selectedTopics.join(","))}`}
+              href={`/practice/clinical?topic=${encodeURIComponent(currentTitle)}&speciality=${encodeURIComponent(currentTitle)}&type=${questionType}&timer=${timerEnabled ? "on" : "off"}&mode=new&topics=${topicMode === "all" ? "all" : encodeURIComponent(selectedTopics.join(","))}&bankId=${encodeURIComponent(dynamicBank?.id || "")}`}
+              onMouseEnter={() => {
+                const target = dynamicBank?.id || rawId;
+                if (target) questionBankApi.prefetchQuestionBank(target);
+              }}
               className={`w-full py-3 rounded-xl bg-brand-orange hover:bg-brand-orange/90 active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-brand-orange/20 flex items-center justify-center transition-all ${
                 selectedTopics.length === 0 ? "opacity-40 pointer-events-none cursor-not-allowed" : "cursor-pointer"
               }`}

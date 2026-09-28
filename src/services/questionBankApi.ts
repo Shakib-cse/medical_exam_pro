@@ -64,6 +64,11 @@ let cachedFreeSampleData: ApiResponse<QuestionBankItemData[]> | null = null;
 let freeSampleCachedAt = 0;
 const FREE_SAMPLE_TTL_MS = 15 * 60 * 1000;
 
+// Client-side cache for instant navigation & starting practice sessions
+const fullBankCache = new Map<string, { data: QuestionBankItemData; cachedAt: number }>();
+const specialtySummaryClientCache = new Map<string, { data: QuestionBankItemData; cachedAt: number }>();
+const CLIENT_BANK_TTL_MS = 15 * 60 * 1000;
+
 export const questionBankApi = {
   getQuestionBanks: async () => {
     const res = await api.get<ApiResponse<QuestionBankItemData[]>>("/question-bank");
@@ -91,6 +96,13 @@ export const questionBankApi = {
   },
 
   getQuestionBankById: async (id: string, freeOnly: boolean = false) => {
+    if (!freeOnly) {
+      const cached = fullBankCache.get(id);
+      if (cached && Date.now() - cached.cachedAt < CLIENT_BANK_TTL_MS) {
+        return { success: true, data: cached.data };
+      }
+    }
+
     if (freeOnly && cachedFreeSampleData?.data) {
       const match = cachedFreeSampleData.data.find(
         (b) =>
@@ -107,10 +119,32 @@ export const questionBankApi = {
     }
     const query = freeOnly ? "?free=true" : "";
     const res = await api.get<ApiResponse<QuestionBankItemData>>(`/question-bank/${id}${query}`);
+    if (res.data?.success && res.data.data && !freeOnly) {
+      const d = res.data.data;
+      const entry = { data: d, cachedAt: Date.now() };
+      fullBankCache.set(id, entry);
+      if (d.specialty) fullBankCache.set(d.specialty.toLowerCase().trim(), entry);
+      if (d.title) fullBankCache.set(d.title.toLowerCase().trim(), entry);
+    }
     return res.data;
   },
 
   getQuestionBankBySpecialty: async (specialty: string, summary: boolean = true, freeOnly: boolean = false) => {
+    const norm = specialty.toLowerCase().trim();
+    if (!freeOnly) {
+      if (summary) {
+        const cached = specialtySummaryClientCache.get(norm);
+        if (cached && Date.now() - cached.cachedAt < CLIENT_BANK_TTL_MS) {
+          return { success: true, data: cached.data };
+        }
+      } else {
+        const cached = fullBankCache.get(norm);
+        if (cached && Date.now() - cached.cachedAt < CLIENT_BANK_TTL_MS) {
+          return { success: true, data: cached.data };
+        }
+      }
+    }
+
     const params = new URLSearchParams();
     if (summary) params.append("summary", "true");
     else params.append("summary", "false");
@@ -118,7 +152,31 @@ export const questionBankApi = {
     const res = await api.get<ApiResponse<QuestionBankItemData>>(
       `/question-bank/specialty/${encodeURIComponent(specialty)}?${params.toString()}`
     );
+
+    if (res.data?.success && res.data.data && !freeOnly) {
+      const d = res.data.data;
+      const entry = { data: d, cachedAt: Date.now() };
+      if (summary) {
+        specialtySummaryClientCache.set(norm, entry);
+        if (d.id) specialtySummaryClientCache.set(d.id, entry);
+        if (d.specialty) specialtySummaryClientCache.set(d.specialty.toLowerCase().trim(), entry);
+        if (d.title) specialtySummaryClientCache.set(d.title.toLowerCase().trim(), entry);
+      } else {
+        fullBankCache.set(norm, entry);
+        if (d.id) fullBankCache.set(d.id, entry);
+        if (d.specialty) fullBankCache.set(d.specialty.toLowerCase().trim(), entry);
+        if (d.title) fullBankCache.set(d.title.toLowerCase().trim(), entry);
+      }
+    }
     return res.data;
+  },
+
+  prefetchQuestionBank: (idOrSpecialty: string) => {
+    if (!idOrSpecialty) return;
+    const norm = idOrSpecialty.toLowerCase().trim();
+    if (!fullBankCache.has(norm) && !fullBankCache.has(idOrSpecialty)) {
+      questionBankApi.getQuestionBankBySpecialty(idOrSpecialty, false).catch(() => {});
+    }
   },
 
   startBankAttempt: async (bankId: string) => {

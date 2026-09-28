@@ -149,30 +149,61 @@ function ProfessionalDilemmasPracticeContent() {
         }
         setLoading(true);
 
-        const banksRes = isFreeOnly
-          ? await questionBankApi.getFreeSampleBanks()
-          : await questionBankApi.getQuestionBanks();
-        const banks = banksRes.data || [];
+        const bankIdParam = searchParams.get("bankId");
+        let fullBank: any = null;
 
-        const normalizedTopic = rawTopic.toLowerCase().replace(/[-_]/g, " ");
-
-        const matchedBank = banks.find((b: any) => {
-          const title = (b.title || "").toLowerCase();
-          const spec = (b.specialty || "").toLowerCase();
-          return (
-            title.includes(normalizedTopic) ||
-            spec.includes(normalizedTopic) ||
-            normalizedTopic.includes(title)
-          );
-        });
-
-        if (matchedBank) {
-          // If questions are already populated (as in free sample banks), reuse directly without second API round-trip
-          let fullBank: any = matchedBank;
-          if (!fullBank?.questions || !Array.isArray(fullBank.questions) || fullBank.questions.length === 0) {
-            const detailRes = await questionBankApi.getQuestionBankById(matchedBank.id, isFreeOnly);
-            fullBank = detailRes.data;
+        // 1. Direct fetch if bankId is provided (instant from cache)
+        if (bankIdParam) {
+          try {
+            const directRes = await questionBankApi.getQuestionBankById(bankIdParam, isFreeOnly);
+            if (directRes?.data?.questions && Array.isArray(directRes.data.questions) && directRes.data.questions.length > 0) {
+              fullBank = directRes.data;
+            }
+          } catch (e) {
+            console.warn("Direct bankId fetch fallback:", e);
           }
+        }
+
+        // 2. Direct fetch by topic name or slug (summary=false)
+        if (!fullBank && rawTopic) {
+          try {
+            const specRes = await questionBankApi.getQuestionBankBySpecialty(rawTopic, false, isFreeOnly);
+            if (specRes?.data?.questions && Array.isArray(specRes.data.questions) && specRes.data.questions.length > 0) {
+              fullBank = specRes.data;
+            }
+          } catch (e) {
+            console.warn("Direct topic fetch fallback:", e);
+          }
+        }
+
+        // 3. Fallback only if direct lookups fail
+        if (!fullBank) {
+          const banksRes = isFreeOnly
+            ? await questionBankApi.getFreeSampleBanks()
+            : await questionBankApi.getQuestionBanks();
+          const banks = banksRes.data || [];
+
+          const normalizedTopic = rawTopic.toLowerCase().replace(/[-_]/g, " ");
+
+          const matchedBank = banks.find((b: any) => {
+            const title = (b.title || "").toLowerCase();
+            const spec = (b.specialty || "").toLowerCase();
+            return (
+              title.includes(normalizedTopic) ||
+              spec.includes(normalizedTopic) ||
+              normalizedTopic.includes(title)
+            );
+          });
+
+          if (matchedBank) {
+            let candidate: any = matchedBank;
+            if (!candidate?.questions || !Array.isArray(candidate.questions) || candidate.questions.length === 0) {
+              const detailRes = await questionBankApi.getQuestionBankById(matchedBank.id, isFreeOnly);
+              candidate = detailRes.data;
+            }
+            fullBank = candidate;
+          }
+        }
 
           if (fullBank?.questions && Array.isArray(fullBank.questions) && fullBank.questions.length > 0) {
             let parsedList: PDQuestion[] = fullBank.questions.map((q: any, idx: number) => {
@@ -228,7 +259,6 @@ function ProfessionalDilemmasPracticeContent() {
               }
             }
           }
-        }
       } catch (err) {
         console.error("Failed to load Professional Dilemmas practice items:", err);
       } finally {

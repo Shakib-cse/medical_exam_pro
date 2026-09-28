@@ -16,6 +16,7 @@ import {
   CPS_SPECIALTIES_CONFIG,
 } from "@/lib/practiceSession";
 import { usePermissions } from "@/lib/permissions";
+import { questionBankApi } from "@/services/questionBankApi";
 
 interface SpecialityCardData {
   id: string;
@@ -85,6 +86,16 @@ export default function ClinicalProblemSolvingPage() {
       window.removeEventListener("practice_session_update", loadAllStats);
     };
   }, [user?.id]);
+
+  // Background warmup of specialty summaries so clicking any card is instant
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      for (const item of specialitiesData) {
+        questionBankApi.getQuestionBankBySpecialty(item.id, true).catch(() => {});
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, []);
 
   const totalQuestions = specialitiesData.reduce((acc, curr) => acc + curr.totalQ, 0); // 8,502 total questions
   let attempted = 0;
@@ -300,6 +311,9 @@ export default function ClinicalProblemSolvingPage() {
           <Link
             key={item.id}
             href={`/dashboard/clinical-problem-solving/${item.id}`}
+            onMouseEnter={() => {
+              questionBankApi.getQuestionBankBySpecialty(item.id, true).catch(() => {});
+            }}
             className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md hover:border-slate-300/80 transition-all duration-500 ease-out flex flex-col justify-between group cursor-pointer"
           >
             {/* Top Image with all 4 corners rounded inside card padding */}

@@ -1,21 +1,116 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Check, Star } from "lucide-react";
+import { subscriptionApi, SubscriptionPlanItem } from "@/services/subscriptionApi";
 
 export default function PricingAndMobileApp() {
+  const [selectedDuration, setSelectedDuration] = useState<1 | 3 | 6>(3);
+  const [plans, setPlans] = useState<SubscriptionPlanItem[]>([]);
+
+  useEffect(() => {
+    subscriptionApi
+      .getPlans()
+      .then((res) => {
+        if (res.success && res.data) {
+          setPlans(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Using fallback subscription plan details:", err);
+      });
+  }, []);
+
+  // Compute pricing matching backend SUBSCRIPTION_PLANS and dashboard
+  const getPlanDetails = (category: "PD" | "FULL_MSRA", duration: 1 | 3 | 6) => {
+    const apiPlan = plans.find(
+      (p) => p.category === category && p.durationMonths === duration
+    );
+
+    if (category === "PD") {
+      const price = apiPlan ? apiPlan.priceGBP : duration === 1 ? 24 : duration === 3 ? 39 : 49;
+      const monthly = (price / duration).toFixed(2);
+      const savings = duration === 3 ? "SAVE 45%" : duration === 6 ? "SAVE 66%" : null;
+      return {
+        id: apiPlan?.id || `pd_${duration}m`,
+        price,
+        monthlyEquivalent: `£${monthly}`,
+        savings,
+      };
+    } else {
+      const price = apiPlan ? apiPlan.priceGBP : duration === 1 ? 39 : duration === 3 ? 69 : 89;
+      const monthly = (price / duration).toFixed(2);
+      const savings = duration === 3 ? "SAVE 41%" : duration === 6 ? "SAVE 62%" : null;
+      return {
+        id: apiPlan?.id || `msra_${duration}m`,
+        price,
+        monthlyEquivalent: `£${monthly}`,
+        savings,
+      };
+    }
+  };
+
+  const pdDetails = getPlanDetails("PD", selectedDuration);
+  const msraDetails = getPlanDetails("FULL_MSRA", selectedDuration);
+
   return (
     <section className="w-full bg-background py-16 sm:py-20 lg:py-24 border-t border-border overflow-hidden">
       <div className="container mx-auto px-4">
         {/* Pricing Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
           <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-extrabold text-foreground tracking-tight leading-tight mb-3">
             Simple, Transparent Pricing
           </h2>
           <p className="text-muted-foreground text-sm sm:text-base font-normal">
             Choose the plan that fits your exam timeline.
           </p>
+        </div>
+
+        {/* Access Period Duration Switcher (like dashboard) */}
+        <div className="flex justify-center mb-12 sm:mb-16">
+          <div className="inline-flex items-center bg-slate-100 p-1.5 rounded-full border border-slate-200/80 shadow-xs text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setSelectedDuration(1)}
+              className={`px-4 sm:px-5 py-2 rounded-full transition-all cursor-pointer ${
+                selectedDuration === 1
+                  ? "bg-navy text-white shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+              }`}
+            >
+              1 Month
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedDuration(3)}
+              className={`px-4 sm:px-5 py-2 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                selectedDuration === 3
+                  ? "bg-navy text-white shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+              }`}
+            >
+              <span>3 Months</span>
+              <span className="text-[9px] bg-brand-orange text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                POPULAR
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedDuration(6)}
+              className={`px-4 sm:px-5 py-2 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                selectedDuration === 6
+                  ? "bg-navy text-white shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+              }`}
+            >
+              <span>6 Months</span>
+              <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                BEST VALUE
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* 3 Pricing Cards */}
@@ -53,11 +148,18 @@ export default function PricingAndMobileApp() {
               <span className="text-xs sm:text-sm font-semibold text-slate-200 block mb-1 pt-2">
                 MSRA full question bank
               </span>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-white mb-1">
-                £24.99
-              </h3>
+              <div className="flex items-baseline gap-2 mb-1">
+                <h3 className="text-3xl sm:text-4xl font-extrabold text-white">
+                  £{msraDetails.price}
+                </h3>
+                {msraDetails.savings && (
+                  <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-wider">
+                    {msraDetails.savings}
+                  </span>
+                )}
+              </div>
               <span className="text-xs text-slate-300/70 block mb-6">
-                Ideal for structured preparation
+                Ideal for structured preparation {selectedDuration > 1 && `(${msraDetails.monthlyEquivalent}/mo)`}
               </span>
 
               <ul className="space-y-3.5 text-xs text-slate-200 mb-8 text-left">
@@ -103,7 +205,7 @@ export default function PricingAndMobileApp() {
             </div>
 
             <Link
-              href="/checkout/full-bank"
+              href={`/dashboard/subscription?plan=${msraDetails.id}`}
               className="w-full py-3.5 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-brand-orange/25 text-center block"
             >
               Choose Plan
@@ -113,19 +215,36 @@ export default function PricingAndMobileApp() {
           {/* Card 3: Standalone professional dilemmas */}
           <div className="bg-card text-card-foreground border border-border rounded-[32px] p-7 sm:p-8 flex flex-col justify-between shadow-sm text-left min-h-[420px]">
             <div>
-              <span className="text-xs sm:text-sm font-semibold text-foreground block mb-1">
-                Standalone professional dilemmas
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs sm:text-sm font-semibold text-foreground block">
+                  Standalone professional dilemmas
+                </span>
+                {pdDetails.savings && (
+                  <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider">
+                    {pdDetails.savings}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-baseline gap-2 mb-1">
+                <h3 className="text-3xl sm:text-4xl font-extrabold text-foreground">
+                  £{pdDetails.price}
+                </h3>
+                {selectedDuration > 1 && (
+                  <span className="text-xs text-muted-foreground font-medium">
+                    ({pdDetails.monthlyEquivalent}/mo)
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground block mb-4">
+                {selectedDuration === 1 ? "1 month dedicated access" : `${selectedDuration} months access`}
               </span>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
-                £8.99
-              </h3>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-6">
                 Dedicated access to professional dilemma cases only, designed for
                 focused situational judgement practice.
               </p>
             </div>
             <Link
-              href="/checkout/dilemmas"
+              href={`/dashboard/subscription?plan=${pdDetails.id}`}
               className="w-full py-3 rounded-full border border-border text-foreground hover:bg-muted font-semibold text-xs sm:text-sm transition-colors text-center block"
             >
               Choose Plan

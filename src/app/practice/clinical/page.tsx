@@ -9,7 +9,6 @@ import {
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { overviewApi } from "@/services/overviewApi";
-import { mockExamApi } from "@/services/mockExamApi";
 import { questionBankApi } from "@/services/questionBankApi";
 import { PracticeHeader } from "../_components/PracticeHeader";
 import { QuestionNavigator, NavigatorItem } from "../_components/QuestionNavigator";
@@ -166,38 +165,67 @@ function ClinicalPracticeContent() {
 
         // Normalize specialty title to find matching QuestionBank in DB
         const rawSpecialty = specialityParam.trim();
-
-        // 1. Fetch QuestionBank list to get matching bank ID
         const isFreeOnly = searchParams.get("free") === "true";
-        const banksRes = isFreeOnly
-          ? await questionBankApi.getFreeSampleBanks()
-          : await questionBankApi.getQuestionBanks();
-        const banks = banksRes.data || [];
+        const bankIdParam = searchParams.get("bankId");
 
-        // Fuzzy match specialty title
-        const matchedBankMeta = banks.find((b: any) => {
-          const bSpec = (b.specialty || "").toLowerCase();
-          const bTitle = (b.title || "").toLowerCase();
-          const search = rawSpecialty.toLowerCase();
-          return (
-            bSpec === search ||
-            bTitle === search ||
-            bSpec.includes(search) ||
-            search.includes(bSpec) ||
-            bTitle.includes(search) ||
-            search.includes(bTitle)
-          );
-        });
-
+        let fullBank: any = null;
         let loadedItems: PracticeItem[] = [];
 
-        if (matchedBankMeta) {
-          // If questions are already populated (as in free sample banks), reuse directly without second API round-trip
-          let fullBank: any = matchedBankMeta;
-          if (!fullBank?.questions || !Array.isArray(fullBank.questions) || fullBank.questions.length === 0) {
-            const bankDetailRes = await questionBankApi.getQuestionBankById(matchedBankMeta.id, isFreeOnly);
-            fullBank = bankDetailRes.data;
+        // 1. Instant direct fetch if bankId is present
+        if (bankIdParam) {
+          try {
+            const directRes = await questionBankApi.getQuestionBankById(bankIdParam, isFreeOnly);
+            if (directRes?.data?.questions && Array.isArray(directRes.data.questions) && directRes.data.questions.length > 0) {
+              fullBank = directRes.data;
+            }
+          } catch (e) {
+            console.warn("Direct bankId fetch fallback:", e);
           }
+        }
+
+        // 2. Direct fetch by specialty name or slug (summary=false)
+        if (!fullBank && rawSpecialty) {
+          try {
+            const specRes = await questionBankApi.getQuestionBankBySpecialty(rawSpecialty, false, isFreeOnly);
+            if (specRes?.data?.questions && Array.isArray(specRes.data.questions) && specRes.data.questions.length > 0) {
+              fullBank = specRes.data;
+            }
+          } catch (e) {
+            console.warn("Direct specialty fetch fallback:", e);
+          }
+        }
+
+        // 3. Fallback only if direct lookups fail
+        if (!fullBank) {
+          const banksRes = isFreeOnly
+            ? await questionBankApi.getFreeSampleBanks()
+            : await questionBankApi.getQuestionBanks();
+          const banks = banksRes.data || [];
+
+          // Fuzzy match specialty title
+          const matchedBankMeta = banks.find((b: any) => {
+            const bSpec = (b.specialty || "").toLowerCase();
+            const bTitle = (b.title || "").toLowerCase();
+            const search = rawSpecialty.toLowerCase();
+            return (
+              bSpec === search ||
+              bTitle === search ||
+              bSpec.includes(search) ||
+              search.includes(bSpec) ||
+              bTitle.includes(search) ||
+              search.includes(bTitle)
+            );
+          });
+
+          if (matchedBankMeta) {
+            let candidate: any = matchedBankMeta;
+            if (!candidate?.questions || !Array.isArray(candidate.questions) || candidate.questions.length === 0) {
+              const bankDetailRes = await questionBankApi.getQuestionBankById(matchedBankMeta.id, isFreeOnly);
+              candidate = bankDetailRes.data;
+            }
+            fullBank = candidate;
+          }
+        }
 
           if (fullBank?.questions && Array.isArray(fullBank.questions) && fullBank.questions.length > 0) {
             const parsedItems: PracticeItem[] = [];
@@ -268,7 +296,6 @@ function ClinicalPracticeContent() {
 
             loadedItems = parsedItems;
           }
-        }
 
         // Fallback: If no DB questions found, fetch from overviewApi
         if (loadedItems.length === 0) {

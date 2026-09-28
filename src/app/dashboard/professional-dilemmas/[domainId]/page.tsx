@@ -215,12 +215,21 @@ export default function ProfessionalDilemmaDomainPage() {
     }
   };
 
+  // Background prefetch the full question bank so starting a practice session is 100% instant!
+  useEffect(() => {
+    const target = dynamicBank?.id || normalizedId;
+    if (target) {
+      questionBankApi.prefetchQuestionBank(target);
+    }
+  }, [dynamicBank?.id, normalizedId]);
+
   const practiceQuery = new URLSearchParams({
     topic: currentTitle,
     speciality: "Professional Dilemmas",
     type: questionType === "Both" ? "SJT" : questionType,
     timer: timerEnabled ? "on" : "off",
     topics: topicMode === "all" ? "all" : selectedTopics.join("|||"),
+    bankId: dynamicBank?.id || "",
   });
 
   if (!permissions.hasPDAccess) {
@@ -604,6 +613,10 @@ export default function ProfessionalDilemmaDomainPage() {
                   ? `/practice/professional-dilemmas?${practiceQuery.toString()}&mode=resume`
                   : "#"
               }
+              onMouseEnter={() => {
+                const target = dynamicBank?.id || normalizedId;
+                if (target) questionBankApi.prefetchQuestionBank(target);
+              }}
               className={`w-full py-3.5 rounded-xl bg-[#1D82EB] hover:bg-[#1875d2] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-blue-500/20 flex items-center justify-center gap-2 transition-all ${
                 hasUnfinishedSession
                   ? "cursor-pointer opacity-100"
@@ -616,6 +629,10 @@ export default function ProfessionalDilemmaDomainPage() {
 
             <Link
               href={`/practice/professional-dilemmas?${practiceQuery.toString()}&mode=new`}
+              onMouseEnter={() => {
+                const target = dynamicBank?.id || normalizedId;
+                if (target) questionBankApi.prefetchQuestionBank(target);
+              }}
               className={`w-full py-3.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] active:scale-[0.99] text-white font-bold text-xs sm:text-sm text-center shadow-xs shadow-orange-500/20 flex items-center justify-center transition-all ${
                 selectedTopics.length === 0
                   ? "opacity-40 pointer-events-none cursor-not-allowed"
