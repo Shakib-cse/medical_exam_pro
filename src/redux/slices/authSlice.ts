@@ -63,7 +63,43 @@ const authSlice = createSlice({
         localStorage.setItem("auth_token", token);
         localStorage.setItem("auth_user", JSON.stringify(user));
         document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+
+        // If user object contains activeSubscription, seed auth_subscription immediately
+        const activeSub = (user as any)?.activeSubscription;
+        if (activeSub && (activeSub.status === "ACTIVE" || (user as any).isSubscribed)) {
+          const isFull = activeSub.planType === "FULL_MSRA";
+          const isPD = activeSub.planType === "PD" || isFull;
+          const initialSub = {
+            isSubscribed: true,
+            activePlan: {
+              id: activeSub.planId || "active_plan",
+              name: activeSub.planName || (isPD && !isFull ? "Professional Dilemmas" : "Full MSRA Pass"),
+              category: activeSub.planType || (isPD && !isFull ? "PD" : "FULL_MSRA"),
+            },
+            subscription: activeSub,
+            unlockedFeatures: {
+              hasFullMSRA: isFull,
+              hasPD: isPD,
+              hasMocks: isFull,
+              isSampleOnly: false,
+            },
+          };
+          localStorage.setItem("auth_subscription", JSON.stringify(initialSub));
+        } else if ((user as any)?.isSubscribed === false) {
+          const freeSub = {
+            isSubscribed: false,
+            unlockedFeatures: {
+              hasFullMSRA: false,
+              hasPD: false,
+              hasMocks: false,
+              isSampleOnly: true,
+            },
+          };
+          localStorage.setItem("auth_subscription", JSON.stringify(freeSub));
+        }
+
         window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new Event("subscription_update"));
         window.dispatchEvent(new CustomEvent("practice_session_update"));
       }
     },
@@ -74,8 +110,10 @@ const authSlice = createSlice({
       if (typeof window !== "undefined") {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
+        localStorage.removeItem("auth_subscription");
         document.cookie = "auth_token=; path=/; max-age=0;";
         window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new Event("subscription_update"));
         window.dispatchEvent(new CustomEvent("practice_session_update"));
       }
     },
@@ -101,7 +139,31 @@ const authSlice = createSlice({
         state.isLoading = false;
         if (typeof window !== "undefined" && action.payload) {
           localStorage.setItem("auth_user", JSON.stringify(action.payload));
+
+          const activeSub = (action.payload as any)?.activeSubscription;
+          if (activeSub && (activeSub.status === "ACTIVE" || (action.payload as any).isSubscribed)) {
+            const isFull = activeSub.planType === "FULL_MSRA";
+            const isPD = activeSub.planType === "PD" || isFull;
+            const initialSub = {
+              isSubscribed: true,
+              activePlan: {
+                id: activeSub.planId || "active_plan",
+                name: activeSub.planName || (isPD && !isFull ? "Professional Dilemmas" : "Full MSRA Pass"),
+                category: activeSub.planType || (isPD && !isFull ? "PD" : "FULL_MSRA"),
+              },
+              subscription: activeSub,
+              unlockedFeatures: {
+                hasFullMSRA: isFull,
+                hasPD: isPD,
+                hasMocks: isFull,
+                isSampleOnly: false,
+              },
+            };
+            localStorage.setItem("auth_subscription", JSON.stringify(initialSub));
+          }
+
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new Event("subscription_update"));
           window.dispatchEvent(new CustomEvent("practice_session_update"));
         }
       })
@@ -113,8 +175,10 @@ const authSlice = createSlice({
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth_token");
           localStorage.removeItem("auth_user");
+          localStorage.removeItem("auth_subscription");
           document.cookie = "auth_token=; path=/; max-age=0;";
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new Event("subscription_update"));
           window.dispatchEvent(new CustomEvent("practice_session_update"));
         }
       });

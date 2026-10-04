@@ -70,6 +70,10 @@ export default function DashboardPage() {
           if (typeof res.data.daysRemaining === "number") {
             setSubscriptionDaysLeft(res.data.daysRemaining);
           }
+          if (typeof window !== "undefined") {
+            localStorage.setItem("auth_subscription", JSON.stringify(res.data));
+            window.dispatchEvent(new Event("subscription_update"));
+          }
         }
       } catch (err) {
         console.warn("Could not fetch current subscription info:", err);

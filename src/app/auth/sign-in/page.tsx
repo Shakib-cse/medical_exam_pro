@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { authApi } from "@/lib/auth"
 import { setSession } from "@/redux/slices/authSlice"
+import { subscriptionApi } from "@/services/subscriptionApi"
 
 const signInSchema = z.object({
   email: z
@@ -72,6 +73,18 @@ function SignInContent() {
       const response = await authApi.login(data)
       if (response.data?.token && response.data?.user) {
         dispatch(setSession({ token: response.data.token, user: response.data.user }))
+
+        // Fetch subscription details in real-time so sidebar reflects exact plan immediately
+        try {
+          const subRes = await subscriptionApi.getCurrentSubscription()
+          if (subRes?.data) {
+            localStorage.setItem("auth_subscription", JSON.stringify(subRes.data))
+            window.dispatchEvent(new Event("subscription_update"))
+          }
+        } catch (subErr) {
+          console.warn("Could not pre-fetch subscription on login:", subErr)
+        }
+
         router.push("/dashboard")
       } else {
         throw new Error(response.message || "Login failed")

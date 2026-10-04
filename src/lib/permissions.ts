@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import { CurrentSubscriptionData } from "@/services/subscriptionApi";
+import { CurrentSubscriptionData, subscriptionApi } from "@/services/subscriptionApi";
 
 export interface UserPermissions {
   isSubscribed: boolean;
@@ -116,16 +116,23 @@ export function getUserPermissions(
 
   // 2. Fallback to user object (Redux / auth_user)
   const now = new Date();
-  const activeSubFromList = user?.subscriptions?.find(
+  const sortedSubs = user?.subscriptions && Array.isArray(user.subscriptions)
+    ? [...user.subscriptions].sort(
+        (a: any, b: any) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      )
+    : [];
+
+  const activeSubFromList = sortedSubs.find(
     (s: any) =>
       s.status === "ACTIVE" &&
       (!s.currentPeriodEnd || new Date(s.currentPeriodEnd) > now)
   );
   const activeSub = user?.activeSubscription || activeSubFromList;
 
-  const planType = activeSub?.planType || user?.planType || "";
-  const planId = activeSub?.planId || user?.planId || "";
-  const planName = activeSub?.planName || user?.planName || "";
+  const planType = (activeSub?.planType || user?.planType || "").toUpperCase();
+  const planId = (activeSub?.planId || user?.planId || "").toLowerCase();
+  const planName = (activeSub?.planName || user?.planName || "").toLowerCase();
 
   const isSubscribed = Boolean(
     user?.isSubscribed ||
@@ -148,13 +155,14 @@ export function getUserPermissions(
   const isFullMSRA =
     planType === "FULL_MSRA" ||
     planId.startsWith("msra_") ||
-    planName.toLowerCase().includes("full msra");
+    planName.includes("full msra");
 
   const isPDOnly =
     !isFullMSRA &&
     (planType === "PD" ||
       planId.startsWith("pd_") ||
-      planName.toLowerCase().includes("dilemma"));
+      planName.includes("dilemma") ||
+      planName.includes("professional"));
 
   if (isPDOnly) {
     return {
@@ -165,7 +173,7 @@ export function getUserPermissions(
       hasCPSAccess: false,
       hasPDAccess: true,
       hasMockAccess: false,
-      planName: planName || "Professional Dilemmas",
+      planName: activeSub?.planName || user?.planName || "Professional Dilemmas",
     };
   }
 
@@ -178,7 +186,7 @@ export function getUserPermissions(
     hasCPSAccess: true,
     hasPDAccess: true,
     hasMockAccess: true,
-    planName: planName || "Full MSRA Pass",
+    planName: activeSub?.planName || user?.planName || "Full MSRA Pass",
   };
 }
 
@@ -215,7 +223,35 @@ export function usePermissions(): UserPermissions {
 
   const currentUser = reduxUser || localUser;
 
+  // Real-time automatic subscription sync on load / user change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;
+
+    let isMounted = true;
+    subscriptionApi
+      .getCurrentSubscription()
+      .then((res) => {
+        if (isMounted && res?.data) {
+          setSubData(res.data);
+          try {
+            localStorage.setItem("auth_subscription", JSON.stringify(res.data));
+            window.dispatchEvent(new Event("subscription_update"));
+          } catch {}
+        }
+      })
+      .catch((err) => {
+        console.warn("Real-time subscription sync in usePermissions failed:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.id]);
+
   return useMemo(() => {
     return getUserPermissions(currentUser, subData);
   }, [currentUser, subData]);
 }
+
