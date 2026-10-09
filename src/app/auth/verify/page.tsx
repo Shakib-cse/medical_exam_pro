@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form"
 import { authApi } from "@/lib/auth"
 import { setSession } from "@/redux/slices/authSlice"
+import { trackSignUp } from "@/lib/analytics"
 
 const verifySchema = z.object({
   code: z
@@ -110,7 +111,8 @@ function VerifyContent() {
       })
 
       if (fromSource === "signup") {
-        setSuccessMessage("Email verified successfully! Redirecting to login...")
+        trackSignUp("email");
+        setSuccessMessage("Email verified successfully! Redirecting to login...");
         setTimeout(() => {
           router.push(`/auth/sign-in?verified=true&email=${encodeURIComponent(emailParam)}`)
         }, 1200)

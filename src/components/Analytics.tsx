@@ -1,26 +1,66 @@
-import Script from "next/script";
+"use client";
 
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID || "G-MDB0HGJBB9";
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+import Script from "next/script";
+import { useEffect, Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import {
+  GA_MEASUREMENT_ID,
+  GOOGLE_ADS_ID,
+  META_PIXEL_ID,
+  trackPageView,
+} from "@/lib/analytics";
+
+function RouteTracker() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (pathname) {
+      const fullUrl = searchParams?.toString()
+        ? `${pathname}?${searchParams.toString()}`
+        : pathname;
+      trackPageView(fullUrl);
+    }
+  }, [pathname, searchParams]);
+
+  return null;
+}
 
 export default function Analytics() {
   return (
     <>
-      {/* Google Analytics 4 (GA4) */}
-      {GA_MEASUREMENT_ID && (
+      {/* Route change tracker for SPA navigations */}
+      <Suspense fallback={null}>
+        <RouteTracker />
+      </Suspense>
+
+      {/* Google Tag (GA4 + Google Ads) */}
+      {(GA_MEASUREMENT_ID || GOOGLE_ADS_ID) && (
         <>
           <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID || GA_MEASUREMENT_ID}`}
             strategy="afterInteractive"
           />
-          <Script id="google-analytics" strategy="afterInteractive">
+          <Script id="google-tags" strategy="afterInteractive">
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
+              window.gtag = gtag;
               gtag('js', new Date());
-              gtag('config', '${GA_MEASUREMENT_ID}', {
-                page_path: window.location.pathname,
-              });
+
+              ${
+                GA_MEASUREMENT_ID
+                  ? `gtag('config', '${GA_MEASUREMENT_ID}', {
+                      page_path: window.location.pathname,
+                    });`
+                  : ""
+              }
+
+              ${
+                GOOGLE_ADS_ID
+                  ? `gtag('config', '${GOOGLE_ADS_ID}');`
+                  : ""
+              }
             `}
           </Script>
         </>
@@ -49,7 +89,7 @@ export default function Analytics() {
               width="1"
               style={{ display: "none" }}
               src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
-              alt=""
+              alt="Meta Pixel"
             />
           </noscript>
         </>

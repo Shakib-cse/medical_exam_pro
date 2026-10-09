@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input"
 import { authApi } from "@/lib/auth"
 import { setSession } from "@/redux/slices/authSlice"
 import { subscriptionApi } from "@/services/subscriptionApi"
+import { trackLogin } from "@/lib/analytics"
 
 const signInSchema = z.object({
   email: z
@@ -73,6 +74,7 @@ function SignInContent() {
       const response = await authApi.login(data)
       if (response.data?.token && response.data?.user) {
         dispatch(setSession({ token: response.data.token, user: response.data.user }))
+        trackLogin("email")
 
         // Fetch subscription details in real-time so sidebar reflects exact plan immediately
         try {

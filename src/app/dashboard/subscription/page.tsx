@@ -12,6 +12,21 @@ import {
 } from "@/services/subscriptionApi";
 import { couponApi, ValidatedCouponInfo } from "@/services/couponApi";
 import {
+  trackPurchase,
+  trackInitiateCheckout,
+  isPurchaseTracked,
+} from "@/lib/analytics";
+
+const PLAN_CATALOG: Record<string, { name: string; price: number }> = {
+  free: { name: "Free Sample Plan", price: 0 },
+  pd_1m: { name: "Professional Dilemmas - 1 Month", price: 24 },
+  pd_3m: { name: "Professional Dilemmas - 3 Months", price: 39 },
+  pd_6m: { name: "Professional Dilemmas - 6 Months", price: 49 },
+  msra_1m: { name: "Full MSRA - 1 Month", price: 39 },
+  msra_3m: { name: "Full MSRA - 3 Months", price: 69 },
+  msra_6m: { name: "Full MSRA - 6 Months", price: 89 },
+};
+import {
   Check,
   Zap,
   Sparkles,
@@ -56,6 +71,9 @@ function SubscriptionPageContent() {
   const statusParam = searchParams.get("status");
   const planIdParam = searchParams.get("plan_id");
 
+  // Ref to prevent duplicate processing within React Strict Mode mount lifecycle
+  const handledPurchaseRef = React.useRef<string | null>(null);
+
   // Load current subscription details from backend
   const loadSubscriptionData = async () => {
     try {
@@ -79,7 +97,7 @@ function SubscriptionPageContent() {
     loadSubscriptionData();
   }, [user?.id]);
 
-  // Handle post-checkout redirect (e.g. ?status=success)
+  // Handle post-checkout redirect (e.g. ?status=success) with robust conversion tracking and deduplication
   useEffect(() => {
     if (statusParam === "success") {
       const isFreeCoupon = searchParams.get("free_coupon") === "true";
@@ -90,11 +108,57 @@ function SubscriptionPageContent() {
         appliedCoupon?.coupon?.code ||
         undefined;
 
+      // Unique transaction identifier for deduplication (Stripe session ID or unique free key)
+      const transactionId =
+        sessionId ||
+        (isFreeCoupon
+          ? `free_${planIdParam || "plan"}_${user?.id || Date.now()}`
+          : `sub_${planIdParam || "plan"}_${Date.now()}`);
+
+      // Check both React ref and persistent storage to strictly prevent duplicate tracking
+      if (
+        handledPurchaseRef.current === transactionId ||
+        isPurchaseTracked(transactionId)
+      ) {
+        console.log(
+          `[Subscription] Purchase ${transactionId} already tracked. Skipping duplicate.`
+        );
+        return;
+      }
+      handledPurchaseRef.current = transactionId;
+
+      const triggerPurchaseTracking = (activatedSub?: any) => {
+        const planInfo = planIdParam ? PLAN_CATALOG[planIdParam] : null;
+        const purchaseValue = isFreeCoupon
+          ? 0
+          : activatedSub?.amount != null
+          ? Number(activatedSub.amount)
+          : planInfo?.price ?? 0;
+        const planName =
+          activatedSub?.planName || planInfo?.name || "Medical Exam Pro Plan";
+
+        // Fires GA4, Google Ads (AW-18500329112), and Meta Pixel (3207242139667023)
+        trackPurchase({
+          transactionId,
+          value: purchaseValue,
+          currency: "GBP",
+          planId: planIdParam || "unknown",
+          planName,
+          couponCode,
+        });
+
+        // Clean query parameters from URL so that browser refreshes do not re-run tracking
+        if (typeof window !== "undefined") {
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      };
+
       if (planIdParam && !isFreeCoupon) {
         // Activate subscription in backend and record coupon redemption
         subscriptionApi
           .activateDevSubscription(planIdParam, sessionId, couponCode)
-          .then(() => {
+          .then((res) => {
             if (typeof window !== "undefined") {
               localStorage.removeItem("pending_coupon_code");
             }
@@ -103,8 +167,12 @@ function SubscriptionPageContent() {
             setActionSuccessMessage(
               "Payment verified successfully! Your new subscription is now active."
             );
+            triggerPurchaseTracking(res?.data);
           })
-          .catch((e) => console.error(e));
+          .catch((e) => {
+            console.error(e);
+            triggerPurchaseTracking();
+          });
       } else {
         if (typeof window !== "undefined") {
           localStorage.removeItem("pending_coupon_code");
@@ -116,9 +184,10 @@ function SubscriptionPageContent() {
             ? "🎉 100% Free Coupon Applied! Your subscription has been activated successfully without charge."
             : "Payment successful! Your account has been upgraded."
         );
+        triggerPurchaseTracking();
       }
     }
-  }, [statusParam, planIdParam, dispatch]);
+  }, [statusParam, planIdParam, dispatch, user?.id]);
 
   // Pricing Matrix based on Client specifications:
   // Professional Dilemmas: 1m: £24, 3m: £39, 6m: £49
@@ -266,6 +335,19 @@ function SubscriptionPageContent() {
   const handleSelectPlan = async (planId: string) => {
     setActionErrorMessage(null);
     setActionSuccessMessage(null);
+
+    // Track InitiateCheckout / begin_checkout event across GA4 and Meta Pixel
+    const planInfo = PLAN_CATALOG[planId];
+    if (planInfo) {
+      const discounted = getDiscountedPrice(planInfo.price, planId);
+      trackInitiateCheckout({
+        planId,
+        planName: planInfo.name,
+        value: discounted.finalPrice,
+        currency: "GBP",
+      });
+    }
+
     try {
       setCheckoutLoading(planId);
       if (appliedCoupon?.coupon?.code && typeof window !== "undefined") {
