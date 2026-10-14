@@ -53,7 +53,7 @@ export default function UnderstandingExam() {
         {/* CTA Button */}
         <div className="mt-8 flex justify-center sm:justify-start">
           <Link
-            href="/resources/msra-exam-guide"
+            href="/exam-guide/overview-1"
             className="inline-flex items-center gap-1.5 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-md shadow-brand-orange/20 hover:scale-[1.02] active:scale-95"
           >
             <span>Learn more about the MSRA exam</span>

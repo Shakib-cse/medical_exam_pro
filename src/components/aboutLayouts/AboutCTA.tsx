@@ -28,7 +28,7 @@ export default function AboutCTA() {
                 </Link>
 
                 <Link
-                  href="/resources/msra-question-bank"
+                  href="/dashboard/question-bank"
                   className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-6 py-3 rounded-full text-sm transition-all shadow-md active:scale-95"
                 >
                   Explore Questions

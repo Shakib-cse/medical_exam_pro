@@ -66,7 +66,7 @@ export default function Footer() {
             <ul className="space-y-3 text-xs sm:text-sm">
               <li>
                 <Link
-                  href="/resources/exams"
+                  href="/exam-guide/overview-1"
                   className="text-slate-300/80 hover:text-white transition-colors"
                 >
                   Exams
@@ -74,7 +74,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/resources/interviews"
+                  href="/how-to-prepare/msra"
                   className="text-slate-300/80 hover:text-white transition-colors"
                 >
                   Interviews Resources

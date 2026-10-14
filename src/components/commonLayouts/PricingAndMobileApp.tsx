@@ -85,30 +85,24 @@ export default function PricingAndMobileApp() {
             <button
               type="button"
               onClick={() => setSelectedDuration(3)}
-              className={`px-4 sm:px-5 py-2 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-4 sm:px-5 py-2 rounded-full transition-all cursor-pointer ${
                 selectedDuration === 3
                   ? "bg-navy text-white shadow-sm font-bold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
               }`}
             >
-              <span>3 Months</span>
-              <span className="text-[9px] bg-brand-orange text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-                POPULAR
-              </span>
+              3 Months
             </button>
             <button
               type="button"
               onClick={() => setSelectedDuration(6)}
-              className={`px-4 sm:px-5 py-2 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-4 sm:px-5 py-2 rounded-full transition-all cursor-pointer ${
                 selectedDuration === 6
                   ? "bg-navy text-white shadow-sm font-bold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
               }`}
             >
-              <span>6 Months</span>
-              <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-                BEST VALUE
-              </span>
+              6 Months
             </button>
           </div>
         </div>
@@ -252,10 +246,10 @@ export default function PricingAndMobileApp() {
           </div>
         </div>
 
-        {/* Mobile App Banner Card */}
+        {/* Mobile App Banner Card - commented out for future release */}
+        {/*
         <div className="bg-navy text-white rounded-3xl p-6 sm:p-10 lg:p-12 border border-white/10 shadow-2xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-            {/* Left Content */}
             <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left">
               <h2 className="text-3xl sm:text-4xl lg:text-[46px] font-extrabold text-white leading-[1.15] mb-5">
                 <span className="block">Try Our</span>
@@ -286,9 +280,7 @@ export default function PricingAndMobileApp() {
                 exam-ready wherever your training takes you.
               </p>
 
-              {/* App Store Buttons */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-8">
-                {/* App Store */}
                 <Link
                   href="#"
                   className="bg-[#0b3352] hover:bg-[#0f3e63] border border-white/20 px-5 py-2.5 rounded-xl flex items-center gap-3 transition-colors text-white"
@@ -306,7 +298,6 @@ export default function PricingAndMobileApp() {
                   </div>
                 </Link>
 
-                {/* Google Play Store */}
                 <Link
                   href="#"
                   className="bg-[#0b3352] hover:bg-[#0f3e63] border border-white/20 px-5 py-2.5 rounded-xl flex items-center gap-3 transition-colors text-white"
@@ -328,7 +319,6 @@ export default function PricingAndMobileApp() {
                 </Link>
               </div>
 
-              {/* Social Proof */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
                 <div className="flex -space-x-2">
                   <div className="w-7 h-7 rounded-full bg-sky-500 text-white font-bold text-[10px] flex items-center justify-center border-2 border-navy">
@@ -357,7 +347,6 @@ export default function PricingAndMobileApp() {
               </div>
             </div>
 
-            {/* Right Image */}
             <div className="lg:col-span-6 flex justify-center lg:justify-end">
               <Image
                 src="/images/commonLayout/mobile.png"
@@ -370,6 +359,7 @@ export default function PricingAndMobileApp() {
             </div>
           </div>
         </div>
+        */}
       </div>
     </section>
   );

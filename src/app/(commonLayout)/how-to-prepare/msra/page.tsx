@@ -3,7 +3,7 @@ import StructuredPreparationSection from "@/components/prepareMsraLayouts/Struct
 import LearningThroughPractice from "@/components/prepareMsraLayouts/LearningThroughPractice";
 import ClinicalKnowledgeSection from "@/components/prepareMsraLayouts/ClinicalKnowledgeSection";
 import ProfessionalJudgementSection from "@/components/prepareMsraLayouts/ProfessionalJudgementSection";
-import ConsistencySection from "@/components/prepareMsraLayouts/ConsistencySection";
+// import ConsistencySection from "@/components/prepareMsraLayouts/ConsistencySection";
 import PrepareCTA from "@/components/prepareMsraLayouts/PrepareCTA";
 
 export const metadata = {
@@ -20,7 +20,7 @@ export default function PrepareMsraPage() {
       <LearningThroughPractice />
       <ClinicalKnowledgeSection />
       <ProfessionalJudgementSection />
-      <ConsistencySection />
+      {/* <ConsistencySection /> */}
       <PrepareCTA />
     </main>
   );

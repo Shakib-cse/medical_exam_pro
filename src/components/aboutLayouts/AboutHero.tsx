@@ -26,7 +26,7 @@ export default function AboutHero() {
             </p>
 
             <Link
-              href="/resources/msra-question-bank"
+              href="/dashboard/question-bank"
               className="bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-lg shadow-brand-orange/20 hover:scale-[1.02] active:scale-95"
             >
               Explore Question Bank

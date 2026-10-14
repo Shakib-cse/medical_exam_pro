@@ -45,7 +45,7 @@ export default function StructuredPreparation() {
             </p>
 
             <Link
-              href="/resources/start-sample"
+              href="/how-to-prepare/msra"
               className="inline-flex items-center gap-1.5 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-md shadow-brand-orange/20 hover:scale-[1.02] active:scale-95"
             >
               <span>Start free sample questions</span>

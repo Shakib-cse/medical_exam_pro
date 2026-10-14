@@ -27,6 +27,9 @@ const Header = () => {
       dropdownTitle: "Exam Guide",
       options: [
         { label: "MSRA exam overview", path: "/exam-guide/overview-1" },
+        { label: "MSRA exam format and content", path: "/exam-guide/overview-2" },
+        { label: "MSRA for GP training, exam day and outcomes", path: "/exam-guide/overview-3" },
+        { label: "MSRA myths and misconceptions that cost marks", path: "/exam-guide/overview-4" },
       ],
     },
     {
@@ -74,6 +77,12 @@ const Header = () => {
                   onMouseLeave={() => setActiveDropdown(null)}
                 >
                   <button
+                    type="button"
+                    onClick={() =>
+                      setActiveDropdown(
+                        activeDropdown === link.name ? null : link.name
+                      )
+                    }
                     className={`flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors ${
                       isActive
                         ? "text-brand-orange font-semibold"
@@ -83,18 +92,18 @@ const Header = () => {
                     {link.name}
                     <ChevronDown
                       size={14}
-                      className={`transition-transform group-hover:rotate-180 ${
-                        isActive
-                          ? "text-brand-orange"
-                          : "text-white/70 group-hover:text-white"
+                      className={`transition-transform duration-200 ${
+                        activeDropdown === link.name
+                          ? "rotate-180 text-brand-orange"
+                          : "group-hover:rotate-180 text-white/70 group-hover:text-white"
                       }`}
                     />
                   </button>
 
                   {/* Dropdown Menu Popup with invisible hover bridge */}
                   {activeDropdown === link.name && (
-                    <div className="absolute top-full left-0 pt-2 w-64 z-50 text-slate-800">
-                      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="absolute top-full left-0 pt-2 w-80 z-50 text-slate-800">
+                      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 sm:p-4 animate-in fade-in slide-in-from-top-2 duration-150">
                         {link.dropdownTitle && (
                           <div className="mb-2 pb-2 border-b border-slate-100">
                             <span className="font-bold text-xs sm:text-sm text-slate-800 underline underline-offset-4 decoration-slate-400">
@@ -103,16 +112,23 @@ const Header = () => {
                           </div>
                         )}
                         <div className="flex flex-col divide-y divide-slate-100">
-                          {link.options?.map((option) => (
-                            <Link
-                              key={option.label}
-                              href={option.path}
-                              onClick={() => setActiveDropdown(null)}
-                              className="py-2.5 px-2 text-xs sm:text-sm text-slate-700 hover:text-slate-900 font-medium hover:bg-slate-50 rounded-lg transition-colors"
-                            >
-                              {option.label}
-                            </Link>
-                          ))}
+                          {link.options?.map((option) => {
+                            const isOptionActive = pathname === option.path;
+                            return (
+                              <Link
+                                key={option.label}
+                                href={option.path}
+                                onClick={() => setActiveDropdown(null)}
+                                className={`py-2 px-2.5 text-xs sm:text-sm font-medium rounded-lg transition-colors leading-snug ${
+                                  isOptionActive
+                                    ? "text-brand-orange bg-brand-orange/10 font-semibold"
+                                    : "text-slate-700 hover:text-slate-900 hover:bg-slate-50"
+                                }`}
+                              >
+                                {option.label}
+                              </Link>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -217,21 +233,22 @@ const Header = () => {
               const isMobileOpen = mobileDropdown === link.name;
               return (
                 <div key={link.name} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <Link
-                      href={link.path}
-                      onClick={() => setIsOpen(false)}
+                  <button
+                    type="button"
+                    onClick={() => setMobileDropdown(isMobileOpen ? null : link.name)}
+                    className="flex items-center justify-between w-full py-1 text-left group"
+                  >
+                    <span
                       className={`text-base font-medium transition-colors ${
                         isActive
                           ? "text-brand-orange font-bold"
-                          : "text-white/90 hover:text-white"
+                          : "text-white/90 group-hover:text-white"
                       }`}
                     >
                       {link.name}
-                    </Link>
-                    <button
-                      onClick={() => setMobileDropdown(isMobileOpen ? null : link.name)}
-                      className="p-1 text-white/70 hover:text-white transition-colors"
+                    </span>
+                    <span
+                      className="p-1 text-white/70 group-hover:text-white transition-colors"
                       aria-label="Toggle Submenu"
                     >
                       <ChevronDown
@@ -240,22 +257,29 @@ const Header = () => {
                           isMobileOpen ? "rotate-180 text-brand-orange" : ""
                         }`}
                       />
-                    </button>
-                  </div>
+                    </span>
+                  </button>
 
                   {/* Collapsible Mobile Options */}
                   {isMobileOpen && (
                     <div className="flex flex-col pl-4 gap-2 border-l border-white/15 ml-2 mt-1">
-                      {link.options?.map((option) => (
-                        <Link
-                          key={option.label}
-                          href={option.path}
-                          onClick={() => setIsOpen(false)}
-                          className="text-sm text-white/80 hover:text-brand-orange font-medium py-1 transition-colors"
-                        >
-                          {option.label}
-                        </Link>
-                      ))}
+                      {link.options?.map((option) => {
+                        const isOptionActive = pathname === option.path;
+                        return (
+                          <Link
+                            key={option.label}
+                            href={option.path}
+                            onClick={() => setIsOpen(false)}
+                            className={`text-sm font-medium py-1.5 transition-colors leading-snug ${
+                              isOptionActive
+                                ? "text-brand-orange font-semibold"
+                                : "text-white/80 hover:text-brand-orange"
+                            }`}
+                          >
+                            {option.label}
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
