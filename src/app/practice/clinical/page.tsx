@@ -50,6 +50,9 @@ export interface SBAQuestion {
   options: OptionItem[];
   correctOption: string;
   explanation: string;
+  peerStats?: Record<string, number>;
+  totalAttempts?: number;
+  selectionCounts?: Record<string, number>;
 }
 
 export interface EMQCase {
@@ -279,6 +282,7 @@ function ClinicalPracticeContent() {
                     ? q.correctAnswer
                     : "A";
 
+                const cases = (q.cases as any) || {};
                 parsedItems.push({
                   id: q.id || `sba-${idx}`,
                   itemType: "SBA",
@@ -290,6 +294,9 @@ function ClinicalPracticeContent() {
                   options: sbaOptions,
                   correctOption: correctLetter,
                   explanation: q.explanation || "No explanation provided.",
+                  peerStats: cases.peerStats || q.peerStats,
+                  totalAttempts: cases.totalAttempts || q.totalAttempts,
+                  selectionCounts: cases.selectionCounts || q.selectionCounts,
                 });
               }
             });
@@ -481,6 +488,34 @@ function ClinicalPracticeContent() {
       ...prev,
       [currentIndex]: optionId,
     }));
+
+    const currentItem = practiceItems[currentIndex];
+    if (currentItem && currentItem.itemType === "SBA" && currentItem.id) {
+      const qId = String(currentItem.id);
+      if (!qId.startsWith("ov-") && !qId.startsWith("sba-")) {
+        questionBankApi
+          .recordQuestionAnswer(qId, { selectedOptions: [optionId] })
+          .then((res) => {
+            if (res?.data?.peerStats) {
+              setPracticeItems((prevList) =>
+                prevList.map((item, i) =>
+                  i === currentIndex && item.itemType === "SBA"
+                    ? {
+                        ...item,
+                        peerStats: res.data.peerStats,
+                        totalAttempts: res.data.totalAttempts,
+                        selectionCounts: res.data.selectionCounts,
+                      }
+                    : item
+                )
+              );
+            }
+          })
+          .catch((err) => {
+            console.warn("Could not record question answer to backend:", err);
+          });
+      }
+    }
   };
 
   // EMQ Option Selection Handlers

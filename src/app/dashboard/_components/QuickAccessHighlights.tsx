@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Flag, XCircle, Ban, ChevronRight } from "lucide-react";
+import { Flag, XCircle, Ban, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import {
@@ -23,6 +23,9 @@ export function QuickAccessHighlights({
   unattemptedCount: propUnattempted,
 }: QuickAccessHighlightsProps) {
   const user = useSelector((state: RootState) => state.auth.user);
+
+  // Collapsible toggle: hidden in small bottom right by default as requested
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   const [counts, setCounts] = useState(() => {
     const activeUserId = typeof window !== "undefined" ? (user?.id || getCurrentUserId()) : null;
@@ -72,79 +75,174 @@ export function QuickAccessHighlights({
     };
   }, [refreshStats, user?.id]);
 
+  // Click outside and Escape key listener to collapse back into the bottom-right point
+  const barContainerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsExpanded(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (barContainerRef.current && !barContainerRef.current.contains(e.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    const timer = setTimeout(() => {
+      window.addEventListener("mousedown", handleClickOutside);
+    }, 150);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("mousedown", handleClickOutside);
+      clearTimeout(timer);
+    };
+  }, [isExpanded]);
+
   return (
-    <div className="w-full bg-[#09223a]/95 backdrop-blur-md rounded-2xl py-2 px-2.5 sm:py-2.5 sm:px-3.5 border border-[#133c63] shadow-2xl shadow-slate-950/40">
-      <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#18426d]/80">
-        {/* Section 1: Flagged Cases (Interactive Button linking to Flag part) */}
-        <div className="pb-2 md:pb-0 md:pr-3">
-          <Link
-            href="/dashboard/flags"
-            title="Go to flagged cases"
-            className="group w-full h-full border border-[#1D82EB] bg-[#0c2b4a]/90 hover:bg-[#113a63] active:bg-[#0c2b4a] rounded-xl py-2 px-3 sm:py-2.5 sm:px-3.5 flex items-center justify-between gap-3 transition-all cursor-pointer shadow-xs hover:border-[#3b96f5] hover:shadow-[0_0_14px_rgba(29,130,235,0.22)] active:scale-[0.99]"
+    <>
+      {/* Collapsed State: Small glowing point button in bottom right */}
+      {!isExpanded && (
+        <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-6 z-50 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-2.5 bg-[#09223a]/95 hover:bg-[#0c2b4a] text-white border border-[#1d82eb]/70 rounded-full shadow-2xl hover:shadow-[0_0_24px_rgba(29,130,235,0.4)] backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-95 hover:border-[#3b96f5]"
+            title="Click to view Quick Practice Highlights"
+            aria-label="Open Quick Access bar"
+            aria-expanded={false}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              {/* Flag Icon Box */}
-              <div className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-lg bg-[#144270]/90 border border-[#23588f] flex items-center justify-center shrink-0 text-white group-hover:scale-105 transition-transform shadow-inner">
-                <Flag className="w-4.5 h-4.5 text-white stroke-[2.2]" />
+            {/* Small glowing pulsating point */}
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
+            </span>
+
+            {/* Flag Icon Box */}
+            <div className="w-6 h-6 rounded-full bg-[#144270] border border-[#23588f] flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform shadow-inner">
+              <Flag className="w-3.5 h-3.5 text-cyan-300 stroke-[2.2]" />
+            </div>
+
+            {/* Label and Badge */}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-200 group-hover:text-white">
+              <span>Quick Stats</span>
+              {counts.flagged > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-cyan-950 text-cyan-300 border border-cyan-800">
+                  {counts.flagged} flagged
+                </span>
+              )}
+            </div>
+
+            <ChevronUp className="w-4 h-4 text-slate-400 group-hover:text-cyan-300 group-hover:-translate-y-0.5 transition-all" />
+          </button>
+        </div>
+      )}
+
+      {/* Expanded State: Full Floating Bottom Bar with Minimize button */}
+      {isExpanded && (
+        <div className="fixed bottom-3 sm:bottom-4 left-4 right-4 lg:left-[calc(16rem+1.5rem)] lg:right-6 xl:right-7 z-50 pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div ref={barContainerRef} className="pointer-events-auto max-w-7xl mx-auto">
+            <div className="w-full bg-[#09223a]/95 backdrop-blur-md rounded-2xl py-2 px-2.5 sm:py-2.5 sm:px-3.5 border border-[#133c63] shadow-2xl shadow-slate-950/40 space-y-2">
+              {/* Header Strip with Minimize Toggle */}
+              <div className="flex items-center justify-between px-2 pt-0.5 pb-1 border-b border-[#143e69]/80 text-[11px]">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-extrabold uppercase tracking-wider text-slate-300 text-[10px]">
+                    Quick Practice Highlights
+                  </span>
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(false);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0e3153] hover:bg-[#144270] text-slate-300 hover:text-white border border-[#1e5287] transition-all cursor-pointer font-bold text-[11px] shadow-2xs group"
+                  title="Hide to small point in bottom right corner"
+                  aria-expanded={true}
+                >
+                  <span>Hide to corner</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-300 group-hover:translate-y-0.5 transition-transform" />
+                </button>
               </div>
-              <div className="min-w-0 text-left">
-                <p className="text-[11px] sm:text-xs font-semibold text-slate-300 leading-tight group-hover:text-white transition-colors">
-                  Flagged Cases
-                </p>
-                <div className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mt-0.5">
-                  {counts.flagged.toLocaleString()}
+
+              {/* The 3 Metric Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#18426d]/80">
+                {/* Section 1: Flagged Cases (Interactive Button linking to Flag part) */}
+                <div className="pb-2 md:pb-0 md:pr-3">
+                  <Link
+                    href="/dashboard/flags"
+                    title="Go to flagged cases"
+                    className="group w-full h-full border border-[#1D82EB] bg-[#0c2b4a]/90 hover:bg-[#113a63] active:bg-[#0c2b4a] rounded-xl py-2 px-3 sm:py-2.5 sm:px-3.5 flex items-center justify-between gap-3 transition-all cursor-pointer shadow-xs hover:border-[#3b96f5] hover:shadow-[0_0_14px_rgba(29,130,235,0.22)] active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Flag Icon Box */}
+                      <div className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-lg bg-[#144270]/90 border border-[#23588f] flex items-center justify-center shrink-0 text-white group-hover:scale-105 transition-transform shadow-inner">
+                        <Flag className="w-4.5 h-4.5 text-white stroke-[2.2]" />
+                      </div>
+                      <div className="min-w-0 text-left">
+                        <p className="text-[11px] sm:text-xs font-semibold text-slate-300 leading-tight group-hover:text-white transition-colors">
+                          Flagged Cases
+                        </p>
+                        <div className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mt-0.5">
+                          {counts.flagged.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subtle Chevron indicator showing it's a clickable button */}
+                    <div className="shrink-0 text-slate-400 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </Link>
+                </div>
+
+                {/* Section 2: Answered Incorrectly (Static Informational Card) */}
+                <div className="py-2 md:py-0 md:px-3">
+                  <div className="w-full h-full border border-[#18426d]/70 bg-[#0c2b4a]/60 rounded-xl py-2 px-3 sm:py-2.5 sm:px-3.5 flex items-center gap-3 cursor-default shadow-xs select-none">
+                    {/* Cross Icon Box */}
+                    <div className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-lg bg-[#144270]/90 border border-[#23588f] flex items-center justify-center shrink-0 text-white shadow-inner">
+                      <XCircle className="w-4.5 h-4.5 text-white stroke-[2.2]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] sm:text-xs font-semibold text-slate-300 leading-tight">
+                        Answered Incorrectly
+                      </p>
+                      <div className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mt-0.5">
+                        {counts.incorrect.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Unattempted Cases (Static Informational Card) */}
+                <div className="pt-2 md:pt-0 md:pl-3">
+                  <div className="w-full h-full border border-[#18426d]/70 bg-[#0c2b4a]/60 rounded-xl py-2 px-3 sm:py-2.5 sm:px-3.5 flex items-center gap-3 cursor-default shadow-xs select-none">
+                    {/* Ban / Circle-Slash Icon Box */}
+                    <div className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-lg bg-[#144270]/90 border border-[#23588f] flex items-center justify-center shrink-0 text-white shadow-inner">
+                      <Ban className="w-4.5 h-4.5 text-white stroke-[2.2]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] sm:text-xs font-semibold text-slate-300 leading-tight">
+                        Unattempted Cases
+                      </p>
+                      <div className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mt-0.5">
+                        {counts.unattempted.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Subtle Chevron indicator showing it's a clickable button */}
-            <div className="shrink-0 text-slate-400 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all">
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </Link>
-        </div>
-
-        {/* Section 2: Answered Incorrectly (Static Informational Card) */}
-        <div className="py-2 md:py-0 md:px-3">
-          <div
-            className="w-full h-full border border-[#18426d]/70 bg-[#0c2b4a]/60 rounded-xl py-2 px-3 sm:py-2.5 sm:px-3.5 flex items-center gap-3 cursor-default shadow-xs select-none"
-          >
-            {/* Cross Icon Box */}
-            <div className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-lg bg-[#144270]/90 border border-[#23588f] flex items-center justify-center shrink-0 text-white shadow-inner">
-              <XCircle className="w-4.5 h-4.5 text-white stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] sm:text-xs font-semibold text-slate-300 leading-tight">
-                Answered Incorrectly
-              </p>
-              <div className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mt-0.5">
-                {counts.incorrect.toLocaleString()}
-              </div>
-            </div>
           </div>
         </div>
-
-        {/* Section 3: Unattempted Cases (Static Informational Card) */}
-        <div className="pt-2 md:pt-0 md:pl-3">
-          <div
-            className="w-full h-full border border-[#18426d]/70 bg-[#0c2b4a]/60 rounded-xl py-2 px-3 sm:py-2.5 sm:px-3.5 flex items-center gap-3 cursor-default shadow-xs select-none"
-          >
-            {/* Ban / Circle-Slash Icon Box */}
-            <div className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-lg bg-[#144270]/90 border border-[#23588f] flex items-center justify-center shrink-0 text-white shadow-inner">
-              <Ban className="w-4.5 h-4.5 text-white stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] sm:text-xs font-semibold text-slate-300 leading-tight">
-                Unattempted Cases
-              </p>
-              <div className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mt-0.5">
-                {counts.unattempted.toLocaleString()}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }
 

@@ -36,14 +36,26 @@ const defaultWeakAreas: WeakAreaItem[] = [
 ];
 
 export function WeakAreasTable({ items = defaultWeakAreas }: WeakAreasTableProps) {
-  const displayItems = items.length > 0 ? items : defaultWeakAreas;
+  // Strictly enforce up to three (3) weakest areas
+  const displayItems = (items.length > 0 ? items : defaultWeakAreas).slice(0, 3);
 
   return (
     <div className="space-y-4">
       {/* Section Header */}
-      <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-        Weak Areas
-      </h2>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            Weak Areas (Top 3 Focus Areas)
+          </h2>
+          <p className="text-xs text-slate-500 font-medium">
+            Personalised weakness analysis identifying your lowest scoring topics
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+          <Sparkles className="w-3 h-3 text-amber-600" />
+          <span>Priority Revision</span>
+        </span>
+      </div>
 
       {/* Table Container */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">

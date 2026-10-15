@@ -22,6 +22,7 @@ import {
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { mockExamApi, MockQuestion, MockExamDetail } from "@/services/mockExamApi";
+import { questionBankApi } from "@/services/questionBankApi";
 import { ClinicalSbaCard } from "../clinical/_components/ClinicalSbaCard";
 import { ClinicalEmqCard } from "../clinical/_components/ClinicalEmqCard";
 import { EmqOptionPickerModal } from "../clinical/_components/EmqOptionPickerModal";
@@ -247,6 +248,10 @@ function MockExamPracticeContent() {
   const handleSelectSba = (optId: string) => {
     if (examSubmitted || !currentQ) return;
     setUserAnswers((prev) => ({ ...prev, [currentQ.id]: optId }));
+
+    if (currentQ.id) {
+      questionBankApi.recordQuestionAnswer(String(currentQ.id), { selectedOptions: [optId] }).catch(() => {});
+    }
   };
 
   const handleSelectEmqOption = (caseId: string, optId: string) => {
@@ -900,6 +905,9 @@ function MockExamPracticeContent() {
                     }),
                     correctOption: currentQ.correctOption || "A",
                     explanation: currentQ.explanation || "",
+                    peerStats: (currentQ.cases as any)?.peerStats,
+                    totalAttempts: (currentQ.cases as any)?.totalAttempts,
+                    selectionCounts: (currentQ.cases as any)?.selectionCounts,
                   }}
                   currentIndex={currentIndex}
                   totalQuestions={questions.length}

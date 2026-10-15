@@ -39,7 +39,7 @@ export default function HeroBanner() {
           {/* Buttons */}
           <div className="flex flex-wrap items-center gap-4">
             <Link
-              href="#"
+              href="/auth/sign-up"
               className="bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold px-7 py-3.5 rounded-full text-sm sm:text-base transition-all shadow-lg shadow-brand-orange/25 hover:scale-[1.02] active:scale-95"
             >
               Start Free Sample

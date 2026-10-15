@@ -175,11 +175,11 @@ export default function DashboardPage() {
 
     const pdAverageTime = formatAverageTime(pdAttempted > 0 ? pdTimeSeconds / pdAttempted : 0);
 
-    // 5. Weak Areas: sort by lowest accuracy ascending
+    // 5. Weak Areas: sort by lowest accuracy ascending (up to 3 weakest topics)
     weakList.sort((a, b) => a.accuracy - b.accuracy);
     const topWeakAreas: WeakAreaItem[] =
       weakList.length > 0
-        ? weakList.slice(0, 5).map((w, idx) => ({
+        ? weakList.slice(0, 3).map((w, idx) => ({
             id: String(idx + 1),
             topic: w.topic,
             speciality: w.speciality,
@@ -194,7 +194,7 @@ export default function DashboardPage() {
     const pdWeakList = weakList.filter((w) => w.speciality === "Professional Dilemmas");
     const topPdWeakAreas: WeakAreaItem[] =
       pdWeakList.length > 0
-        ? pdWeakList.slice(0, 5).map((w, idx) => ({
+        ? pdWeakList.slice(0, 3).map((w, idx) => ({
             id: String(idx + 1),
             topic: w.topic,
             speciality: w.speciality,
